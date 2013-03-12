@@ -130,6 +130,17 @@ public final class Delta {
    * as toggls. In theory, this ought to reduce the 
    * overall serialization bits so long as the index
    * identifiers are sequential.
+   * 
+   * This has not yet been optimized for performance... 
+   * the implementation may change significantly over
+   * time but the basic idea is straightforward..
+   * 
+   * Note: one optimizatin we make is that we skip
+   * conversion to trans if the number of toggls is
+   * less than 7... this is because the overhead of 
+   * encoding the trangs is >= 7 additional bytes, 
+   * so we wouldn't actually be saving anything, 
+   * in fact we could end up wasting space
    */
   private void preprocessToggles(
     Multimap<String,Operation> instructions) {
