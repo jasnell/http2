@@ -2,15 +2,6 @@ package snell.http2.utils;
 
 import java.util.Arrays;
 
-/**
- * A simple (and somewhat inefficient) int-to-int Map
- * Inefficient because it currently uses arraycopy to
- * increment the size of the internal storage only one
- * item at a time as size >= initial_capacity.
- * 
- * TODO: use a growth factor to increase the size more
- *       efficiently
- */
 public final class IntMap {
 
   private int[] keys, vals;
