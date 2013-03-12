@@ -184,15 +184,36 @@ public abstract class MLU<X>{
    * included in the IntMap.
    */
   public IntMap reindex() {
+    // Remove items from the internal storage... we wait to 
+    // do this to ensure that all references are used and 
+    // done prior to removing...
     store.removeAll(to_remove);
     to_remove.clear();
+    // Check to see if there's anything to do...
     if (index.size() <= 1) {
+      // Nope, clean up and return
       no_reindex.clear();
       return new IntMap(); // empty change set
     }
+    
+    // Determine the new sort order for the index.
+    // This implementation uses a quicksort, calculating
+    // the sort keys by calculating each items refcnt
+    // by the internal op counter. There is an obvious
+    // upper limit on this enforced. There can only be
+    // a maximum of Integer.MAX_VALUE operations on this
+    // particular implementation of MLU. In the future,
+    // I will add an automatic adjustment to that so that
+    // when refcnt's reach a specific threshold, we can 
+    // reset the operation counter to a lower more reasonable
+    // value to prevent possible overflow
     int[] new_key_order = 
-      sort(index.keys());  // quicksort
+      sort(index.keys());
+    
+    // clear the no_reindex set now that we've resorted everything
     no_reindex.clear();
+    
+    // prepare the new index storage...
     IntMap new_index = 
       new IntMap(
         new_key_order.length);
@@ -202,6 +223,10 @@ public abstract class MLU<X>{
     IntMap revised_mapping = 
       new IntMap(
         new_key_order.length);
+    
+    // Loop through copying the old index state into the new index
+    // Keep track of which items were changed so that we can notify
+    // the HeaderGroup...
     for (int old_idx : new_key_order) {
       int new_idx = 
         new_index.appendWithOffset(
@@ -220,6 +245,9 @@ public abstract class MLU<X>{
     this.offset = 
       min_offset + 
       this.index.size();
+    
+    // This will tell any subscribed HeaderGroups which indices
+    // to update in their internal storage...
     this.notifyReindexListeners(
       revised_mapping);
     return revised_mapping;
@@ -230,7 +258,6 @@ public abstract class MLU<X>{
       1.0 : 
       refcnt.get(idx) / c;
   }
-  
   
   private int partition(
     int[] keys, 
@@ -287,5 +314,13 @@ public abstract class MLU<X>{
   
   public static interface ReindexListener {
     void reindexed(IntMap changes);
+  }
+  
+  public int updatesRemaining() {
+    return Integer.MAX_VALUE - c;
+  }
+  
+  public int offsetsRemaining() {
+    return Integer.MAX_VALUE - offset;
   }
 }

@@ -105,4 +105,13 @@ public class StringValueMLU
       throw Throwables.propagate(t);
     }
   }
+  
+  public long sizeRemaining() {
+    return max_size - cur_size;
+  }
+  
+  public int itemsRemaining() {
+    return max_items - size();
+  }
+  
 }

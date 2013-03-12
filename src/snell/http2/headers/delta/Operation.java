@@ -114,7 +114,7 @@ public abstract class Operation
 
   public void writeTo(OutputStream buf) throws IOException {}
   
-  public static class Toggl extends Operation {
+  public final static class Toggl extends Operation {
     private final int index;
     private transient int hash = -1;
     public Toggl(int index) {
@@ -164,7 +164,7 @@ public abstract class Operation
     
   }
   
-  public static class Trang extends Operation {
+  public final static class Trang extends Operation {
     private final int s,e;
     private transient int hash = -1;
     public Trang(int s, int e) {
@@ -229,7 +229,7 @@ public abstract class Operation
     
   }
   
-  public static class Clone extends Operation {
+  public final static class Clone extends Operation {
     private final int index;
     private final ValueProvider val;
     private transient int hash = -1;
@@ -297,7 +297,7 @@ public abstract class Operation
     
   }
   
-  public static class Kvsto extends Operation {
+  public final static class Kvsto extends Operation {
     private final String key;
     private final ValueProvider val;
     private transient int hash = -1;
