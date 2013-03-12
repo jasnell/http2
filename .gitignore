@@ -1,0 +1,9 @@
+target
+bin
+*.class
+.classpath
+.project
+.settings
+
+
+src/Huffman.java
