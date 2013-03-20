@@ -26,8 +26,8 @@ public class DateTimeValueProvider
     return dt.getMillis() / 1000;
   }
   
-  public byte flags() {
-    return 0x26;  // binary value, numeric and date.. all set
+  public int flags() {
+    return 0x80;
   }
 
   public DateTime dateTimeValue() {

@@ -395,14 +395,18 @@ public abstract class Operation
   
   
   static final ValueParser<?> selectValueParser(int flags) {
-    if ((flags & 0x20) != 0x20) {
+    int b = flags >>> 6;
+    switch(b) {
+    case 0: 
       return new StringValueParser();
-    } else if ((flags & 0x20) == 0x20 && (flags & 0x04) == 0x04){
-      if ((flags & 0x02) == 0x02)
-        return new DateTimeValueParser();
-      else 
-        return new NumberValueParser();
+    case 1:
+      return new NumberValueParser();
+    case 2: 
+      return new DateTimeValueParser();
+    case 3:
+      return new BinaryDataValueParser();
+    default:
+      throw new IllegalArgumentException("Invalid Flags...");
     }
-    return new BinaryDataValueParser();
   }
 }

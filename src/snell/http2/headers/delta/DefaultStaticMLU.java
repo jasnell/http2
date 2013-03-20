@@ -166,7 +166,7 @@ public class DefaultStaticMLU
     public void writeTo(
       OutputStream buffer) 
         throws IOException {}
-    public byte flags() {
+    public int flags() {
       return 0;
     }    
   };

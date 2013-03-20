@@ -14,16 +14,19 @@ public interface ValueProvider {
   /**
    * These may change... 
    * 
-   * 0x80 - Reserved
-   * 0x40 - Reserved
-   * 0x20 - Text if Unset, Binary if Set
-   * 0x10 - ISO-8859-1 if Unset, UTF-8 if Set (only if 0x20 is Unset)
-   * 0x08 - Huffman Coded if Set (only if 0x20 is Unset)
-   * 0x04 - Numeric Value (only if 0x20 is Set)
-   * 0x02 - Date Value (only if 0x20 and 0x04 are Set)
-   * 0x01 - Reserved
+   * 00000000
+   * 
+   * Offsets 0..1 => type code
+   *   00 => text
+   *   01 => number
+   *   10 => date
+   *   11 => binary
+   *   
+   * Offset 2     => ISO-8859-1 if Unset, UTF-8 if Set (only if type code == 00)
+   * Offset 3     => Huffman coded if set (only if type code == 00)
+   * Offset 4..7  => Reserved
    */
-  byte flags();
+  int flags();
   
   public static interface ValueParser<V extends ValueProvider> {
     V parse(InputStream in, int flags) throws IOException;

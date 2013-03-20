@@ -19,6 +19,8 @@ public class StringValueProvider
 
   private final String[] strings;
   private transient int hash = -1;
+  private final boolean utf8 = true; // for now
+  private final boolean huff = false; // for now
   
   public StringValueProvider(String... strings) {
     if (strings == null || 
@@ -41,7 +43,7 @@ public class StringValueProvider
     if (strings.length == 0) 
       throw new IllegalArgumentException();
     else {
-      buf.write(strings.length);
+      buf.write(strings.length-1);
       for (int n = 0; n < strings.length; n++) {
         byte[] data = strings[n].getBytes("UTF-8");
         buf.write(int2uvarint(data.length));
@@ -76,8 +78,11 @@ public class StringValueProvider
   }
 
   @Override
-  public byte flags() {
-    return 0x10;
+  public int flags() {
+    int f = 0x00;
+    if (utf8) f |= 0x20;
+    if (huff) f |= 0x10;
+    return f;
   }
  
   public static class StringValueParser 
@@ -87,15 +92,15 @@ public class StringValueProvider
       InputStream in, 
       int flags) 
         throws IOException {
-      // TODO: Handle huffman-coded data 
       List<String> strings = 
         new ArrayList<String>();
       int c = in.read();
-      while (c > 0) {
+      while (c >= 0) {
+        // todo: handle huffman coding
         strings.add(
           readLengthPrefixedString(
             in, 
-            ((flags & 0x10) == 0x10) ? 
+            ((flags & 0x20) == 0x20) ? 
               "UTF-8" : 
               "ISO8859-1"));
         c--;

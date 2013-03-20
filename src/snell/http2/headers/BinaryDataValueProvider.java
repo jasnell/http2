@@ -66,8 +66,8 @@ public class BinaryDataValueProvider
   }
   
   @Override
-  public byte flags() {
-    return 0x20;
+  public int flags() {
+    return 0xC0;
   }
   
   public static class BinaryDataValueParser 

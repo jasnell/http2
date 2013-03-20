@@ -207,6 +207,12 @@ public abstract class MLU<X>{
     // when refcnt's reach a specific threshold, we can 
     // reset the operation counter to a lower more reasonable
     // value to prevent possible overflow
+    // TODO: Investigate whether or not len(index) must always 
+    // equal len(storage).. that is, is it possible to work
+    // efficiently with an index whose size is significantly
+    // smaller than the actual storage. This would give us 
+    // few items to sort and search each time while keeping
+    // data around for later use if necessary.
     int[] new_key_order = 
       sort(index.keys());
     

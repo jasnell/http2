@@ -92,8 +92,8 @@ public class NumberValueProvider
   }
 
   @Override
-  public byte flags() {
-    return 0x24;
+  public int flags() {
+    return 0x40;
   }
   
   public String toString() {
