@@ -22,32 +22,42 @@ public abstract class Operation
   implements Comparable<Operation> {
 
   public static enum Code {
-    TOGGL((byte)0x1, "toggl") {
+    STOGGL((byte)0x0, "stoggl") {
       public Operation parse(InputStream in) throws IOException {
         return Toggl.parse(in);
       }
     },
-    TRANG((byte)0x2, "trang") {
+    ETOGGL((byte)0x1, "etoggl") {
+      public Operation parse(InputStream in) throws IOException {
+        return Toggl.parse(in);
+      }
+    },
+    STRANG((byte)0x2, "strang") {
       public Operation parse(InputStream in) throws IOException {
         return Trang.parse(in);
       }
     },
-    CLONE((byte)0x3, "clone") {
+    ETRANG((byte)0x3, "etrang") {
+      public Operation parse(InputStream in) throws IOException {
+        return Trang.parse(in);
+      }
+    },
+    SKVSTO((byte)0x4, "skvsto") {
+      public Operation parse(InputStream in) throws IOException {
+        return Kvsto.parse(in);
+      }
+    },
+    EKVSTO((byte)0x5, "ekvsto") {
+      public Operation parse(InputStream in) throws IOException {
+        return Kvsto.parse(in);
+      }
+    },
+    SCLONE((byte)0x6, "sclone") {
       public Operation parse(InputStream in) throws IOException {
         return Clone.parse(in);
       }
     },
-    KVSTO((byte)0x4, "kvsto") {
-      public Operation parse(InputStream in) throws IOException {
-        return Kvsto.parse(in);
-      }
-    },
-    EREF((byte)0x5, "eref") {
-      public Operation parse(InputStream in) throws IOException {
-        return Kvsto.parse(in);
-      }
-    },
-    ECLONE((byte)0x6, "eclone") {
+    ECLONE((byte)0x7, "eclone") {
       public Operation parse(InputStream in) throws IOException {
         return Clone.parse(in);
       }
@@ -68,7 +78,7 @@ public abstract class Operation
     }
     public static Code get(byte b) {
       try {
-        return values()[b-1];
+        return values()[b];
       } catch (Throwable t) {
         throw new IllegalArgumentException();
       }
@@ -118,7 +128,7 @@ public abstract class Operation
     private final int index;
     private transient int hash = -1;
     public Toggl(int index) {
-      super(Code.TOGGL);
+      super(Code.STOGGL);
       this.index = index;
     }
     public void writeTo(OutputStream buf) throws IOException {
@@ -168,7 +178,7 @@ public abstract class Operation
     private final int s,e;
     private transient int hash = -1;
     public Trang(int s, int e) {
-      super(Code.TRANG);
+      super(Code.STRANG);
       this.s = s;
       this.e = e;
     }
@@ -234,7 +244,7 @@ public abstract class Operation
     private final ValueProvider val;
     private transient int hash = -1;
     public Clone(int index, ValueProvider val) {
-      super(Code.CLONE);
+      super(Code.SCLONE);
       this.index = index;
       this.val = val;
     }
@@ -302,7 +312,7 @@ public abstract class Operation
     private final ValueProvider val;
     private transient int hash = -1;
     public Kvsto(String key, ValueProvider val) {
-      super(Code.KVSTO);
+      super(Code.SKVSTO);
       this.key = key;
       this.val = val;
     }
@@ -384,16 +394,7 @@ public abstract class Operation
   public static Operation makeKvsto(String key, ValueProvider val) {
     return new Kvsto(key, val);
   }
-  
-  public static Operation makeEref(String key, ValueProvider val) {
-    return new Kvsto(key, val);
-  }
-  
-  public static Operation makeEclone(int index, ValueProvider val) {
-    return new Clone(index,val);
-  }
-  
-  
+    
   static final ValueParser<?> selectValueParser(int flags) {
     int b = flags >>> 6;
     switch(b) {

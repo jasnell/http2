@@ -1,25 +1,20 @@
 package snell.http2.headers.delta;
 
-import static snell.http2.headers.delta.Operation.makeEref;
-import static snell.http2.headers.delta.Operation.makeEclone;
 import static snell.http2.headers.delta.Operation.makeClone;
 import static snell.http2.headers.delta.Operation.makeKvsto;
 import static snell.http2.headers.delta.Operation.makeToggl;
-import static snell.http2.headers.delta.Operation.Code.CLONE;
-import static snell.http2.headers.delta.Operation.Code.EREF;
-import static snell.http2.headers.delta.Operation.Code.KVSTO;
-import static snell.http2.headers.delta.Operation.Code.TOGGL;
-import static snell.http2.headers.delta.Operation.Code.TRANG;
+import static snell.http2.headers.delta.Operation.Code.*;
 import static snell.http2.headers.delta.Operation.Code.ECLONE;
-import static snell.http2.headers.delta.Operation.Code.get;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 import snell.http2.headers.HeaderSet;
 import snell.http2.headers.ValueProvider;
@@ -61,11 +56,11 @@ public final class Delta {
     HeaderSet<?> set) throws IOException {
       // Read Group ID
       int g_id = in.read(); // group id!
-      if (g_id == -1)
-        throw new IllegalStateException(); //Obviously that's not gonna work
-      byte[] header = new byte[2];      
+      if (g_id < 0)
+        throw new IllegalStateException(); //Obviously that's not gonna work   
       ImmutableMultimap.Builder<String,Operation> ops = 
         ImmutableMultimap.builder();
+      byte[] header = new byte[2];   
       while(in.read(header) > -1) {
         Operation.Code code = 
           get(header[0]);
@@ -80,7 +75,29 @@ public final class Delta {
         group.storage(), 
         group, 
         instructions);
-      // ephemeral clones...
+      // ephemeral toggls...... bleh, this is ugly... need to improve this
+      // issue: we need to grab the value references before calling
+      // adjustHeaderGroupEntries, then we need to go through and determine
+      // if it's a toggl on or toggl off... will refactor this so it's a 
+      // cleaner implementation later on.
+      Set<Pair<String,ValueProvider>> keys_to_turn_off = 
+        new HashSet<Pair<String,ValueProvider>>();
+      for (Operation op : instructions.get("etoggl")) {
+        Toggl toggl = (Toggl) op;
+        int idx = toggl.index();
+        Pair<String,ValueProvider> pair = 
+            group.storage().lookupfromIndex(idx);
+          if (pair == null)
+            throw new RuntimeException("Crap!");
+        if (group.hasEntry(idx)) {
+          // going to turn it off
+          keys_to_turn_off.add(pair);
+        } else {
+          // going to turn it on, temporarily, just for his headerset
+          set.set(pair.one(),pair.two());
+        }
+      }
+      // ephemeral clones
       for (Operation op : instructions.get("eclone")) {
         Clone clone = (Clone) op;
         int idx = clone.index();
@@ -90,9 +107,9 @@ public final class Delta {
         set.set(key, clone.val());   
       }
       adjustHeaderGroupEntries(group, group.storage());
-      group.set(set);
-      // ephemeral headers...
-      for (Operation op : instructions.get("eref")) {
+      group.set(set, keys_to_turn_off);
+      // ephemeral kvsto operation...
+      for (Operation op : instructions.get("ekvsto")) {
         Kvsto ref = (Kvsto) op;
         set.set(ref.key(), ref.val());
       }
@@ -101,12 +118,14 @@ public final class Delta {
   // Serialization of Operations...
   
   private final Operation.Code[] SER_ORDER = {
-    TOGGL,
-    TRANG,
-    CLONE,
+    STOGGL,
+    ETOGGL,
+    STRANG,
+    ETRANG,
     ECLONE,
-    KVSTO,
-    EREF
+    EKVSTO,
+    SCLONE,
+    SKVSTO
   };
   
   public void encodeTo(
@@ -135,7 +154,7 @@ public final class Delta {
    * the implementation may change significantly over
    * time but the basic idea is straightforward..
    * 
-   * Note: one optimizatin we make is that we skip
+   * Note: one optimization we make is that we skip
    * conversion to trans if the number of toggls is
    * less than 7... this is because the overhead of 
    * encoding the trangs is >= 7 additional bytes, 
@@ -145,7 +164,7 @@ public final class Delta {
   private void preprocessToggles(
     Multimap<String,Operation> instructions) {
       Collection<Operation> toggls = 
-        instructions.get("toggl");
+        instructions.get("stoggl");
       if (toggls.size() < 7) {
         // it's likely not going to be worth the extra opcode overhead
         // so let's skip out and not worry about compacting them
@@ -155,7 +174,7 @@ public final class Delta {
       List<Operation> toggs = 
         new ArrayList<Operation>();
       Collection<Operation> trang = 
-        instructions.get("trang");
+        instructions.get("strang");
       Iterator<Operation> ops = 
         toggls.iterator();
       while(ops.hasNext()) {
@@ -183,8 +202,8 @@ public final class Delta {
           }
         }
       }
-      instructions.replaceValues("toggl", toggs);
-      instructions.putAll("trang", trang);
+      instructions.replaceValues("stoggl", toggs);
+      instructions.putAll("strang", trang);
   }
   
   private void rangeToOperation(
@@ -241,7 +260,7 @@ public final class Delta {
           storage.lookupfromIndex(idx);
         if (!headers.contains(pair.one(), pair.two()))
           instructions.put(
-            "toggl", 
+            "stoggl", 
             Operation.makeToggl(idx));
       }
       for (String key : headers)
@@ -284,26 +303,26 @@ public final class Delta {
         if (pair.one() > -1) {
           instructions.put(
             "eclone", 
-            makeEclone(pair.one(),val));
+            makeClone(pair.one(),val));
         } else {
           instructions.put(
-            "eref", 
-            makeEref(key, val));
+            "ekvsto", 
+            makeKvsto(key, val));
         }
         return true;
       }
       if (pair.two() > -1 && 
           !group.hasEntry(pair.two())) {
         instructions.put(
-          "toggl", 
+          "stoggl", 
           makeToggl(pair.two()));
       } else if (pair.one() > -1) {
         instructions.put(
-          "clone", 
+          "sclone", 
           makeClone(pair.one(), val));
       } else {
         instructions.put(
-          "kvsto", 
+          "skvsto", 
           makeKvsto(key, val));
       }
       return true;
@@ -313,11 +332,11 @@ public final class Delta {
       Storage storage, 
       HeaderGroup group, 
       Multimap<String,Operation> instructions) {
-        for (Operation op : instructions.get("toggl"))
+        for (Operation op : instructions.get("stoggl"))
           executeOperation(storage, group, op);
-        for (Operation op : instructions.get("trang"))
+        for (Operation op : instructions.get("strang"))
           executeOperation(storage, group, op);
-        for (Operation op : instructions.get("clone")) {
+        for (Operation op : instructions.get("sclone")) {
           Operation.Clone clone = (Clone) op;
           int index = clone.index();
           String key = 
@@ -326,7 +345,7 @@ public final class Delta {
             throw new RuntimeException("Crap!");
           executeOperation(storage, group, clone.asKvsto(key));        
         }
-        for (Operation op : instructions.get("kvsto"))
+        for (Operation op : instructions.get("skvsto"))
           executeOperation(storage, group, op);
     }
     

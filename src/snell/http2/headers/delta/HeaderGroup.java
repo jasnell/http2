@@ -73,6 +73,15 @@ public final class HeaderGroup
       set.set(entry.one(), entry.two());
     }
   }
+  
+  public void set(HeaderSet<?> set, Set<Pair<String,ValueProvider>> except) {
+    for (int idx : getIndices()) {
+      Pair<String, ValueProvider> entry = 
+        storage.lookupfromIndex(idx);
+      if (!except.contains(entry))
+        set.set(entry.one(), entry.two());
+    }
+  }
 
   @Override
   /**
