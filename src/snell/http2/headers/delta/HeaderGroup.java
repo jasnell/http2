@@ -5,7 +5,7 @@ import java.util.Set;
 
 import com.google.common.base.Objects;
 
-import snell.http2.headers.HeaderSet;
+import snell.http2.headers.HeaderSetter;
 import snell.http2.headers.ValueProvider;
 import snell.http2.utils.IntMap;
 import snell.http2.utils.Pair;
@@ -66,7 +66,7 @@ public final class HeaderGroup
       .toString();
   }
   
-  public void set(HeaderSet<?> set) {
+  public void set(HeaderSetter<?> set) {
     for (int idx : getIndices()) {
       Pair<String, ValueProvider> entry = 
         storage.lookupfromIndex(idx);
@@ -74,7 +74,7 @@ public final class HeaderGroup
     }
   }
   
-  public void set(HeaderSet<?> set, Set<Pair<String,ValueProvider>> except) {
+  public void set(HeaderSetter<?> set, Set<Pair<String,ValueProvider>> except) {
     for (int idx : getIndices()) {
       Pair<String, ValueProvider> entry = 
         storage.lookupfromIndex(idx);

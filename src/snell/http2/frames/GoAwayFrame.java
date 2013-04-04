@@ -1,72 +1,91 @@
 package snell.http2.frames;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static java.lang.Math.max;
+import static snell.http2.utils.IoUtils.read32;
+import static snell.http2.utils.IoUtils.write32;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-import snell.http2.utils.IoUtils;
-
-public class GoAwayFrame 
+public final class GoAwayFrame 
   extends Frame<GoAwayFrame> {
-  
-  public static enum Status {
-    OK, 
-    PROTOCOL_ERROR,
-    INTERNAL_ERROR;
- 
-    public GoAwayFrame create(int id) {
-      return GoAwayFrame.create(id, this);
-    }
-    
-    public GoAwayFrame create() {
-      return GoAwayFrame.create(this);
-    }
-    
-    public static Status get(int o) {
-      return values()[o];
-    }
-  }
   
   static final byte TYPE = 0x7;
   
+  public static GoAwayFrameBuilder make() {
+    return new GoAwayFrameBuilder();
+  }
+  
+  public static class GoAwayFrameBuilder 
+    extends FrameBuilder<GoAwayFrame,GoAwayFrameBuilder> {
+
+    private int status;
+    private int lastStream;
+    
+    public GoAwayFrameBuilder() {
+      super(TYPE);
+    }
+    
+    protected void parseRest(
+      InputStream in)
+        throws IOException {
+      checkNotNull(in);
+      this.lastStream = read32(in);
+      this.status = read32(in);
+    }
+    
+    public GoAwayFrameBuilder status(Status status) {
+      this.status = checkNotNull(status).ordinal();
+      return this;
+    }
+    
+    public GoAwayFrameBuilder lastStream(int id) {
+      checkArgument(id >= 0 && id <= Integer.MAX_VALUE);
+      this.lastStream = id;
+      return this;
+    }
+    
+    @Override
+    public GoAwayFrame get() {
+      this.length = 8;
+      return new GoAwayFrame(this);
+    }
+    
+  }
+  
   private final int status;
+  private final int lastStream;
   
   protected GoAwayFrame(
-    int opaque_id,
-    int status) {
-      super(true, TYPE, opaque_id, 4);
-      this.status = status;
+    GoAwayFrameBuilder builder) {
+      super(builder);
+      this.status = 
+        max(0,builder.status);
+      this.lastStream = 
+        max(0,builder.lastStream);
   }
 
-  @Override
-  public void writeTo(OutputStream out) throws IOException {
-    putUvarint(status);
-    super.writeTo(out);
+  public Status status() {
+    try {
+      return Status.values()[status];
+    } catch (Throwable t) {
+      return null;
+    }
   }
   
-  static GoAwayFrame parse(
-    boolean fin, 
-    boolean con, 
-    int opaque_id, 
-    int size, 
-    InputStream rest) 
+  public int lastStream() {
+    return lastStream;
+  }
+  
+  protected void writeRest(
+    OutputStream out) 
       throws IOException {
-    int status = IoUtils.uvarint2int(rest);
-    GoAwayFrame frame = 
-      GoAwayFrame.create(opaque_id, Status.get(status));
-    frame.fin(fin);
-    frame.con(con);
-    return frame;
-  }
-
-  public static GoAwayFrame create(int id, Status status) {
-    if (status == null)
-      throw new IllegalArgumentException();
-    return new GoAwayFrame(id, status.ordinal());
-  }
-  
-  public static GoAwayFrame create(Status status) {
-    return create(0,status);
+    checkNotNull(out);
+    write32(out,lastStream);
+    write32(out,status);
   }
 
 }

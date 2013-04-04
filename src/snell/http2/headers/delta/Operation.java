@@ -398,13 +398,13 @@ public abstract class Operation
   static final ValueParser<?> selectValueParser(int flags) {
     int b = flags >>> 6;
     switch(b) {
-    case 0: 
+    case 0x0: 
       return new StringValueParser();
-    case 1:
+    case 0x1:
       return new NumberValueParser();
-    case 2: 
+    case 0x2: 
       return new DateTimeValueParser();
-    case 3:
+    case 0x3:
       return new BinaryDataValueParser();
     default:
       throw new IllegalArgumentException("Invalid Flags...");

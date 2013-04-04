@@ -1,7 +1,6 @@
 package snell.http2.frames;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
 import static java.lang.Math.max;
 import static snell.http2.utils.IoUtils.read32;
 import static snell.http2.utils.IoUtils.write32;
@@ -20,35 +19,26 @@ import snell.http2.headers.HeaderSet;
 import snell.http2.headers.HeaderSetter;
 import snell.http2.headers.ValueProvider;
 
-public final class HeadersFrame 
-  extends Frame<HeadersFrame>
-  implements HeaderSet<HeadersFrame> {
+public final class PushPromiseFrame 
+  extends Frame<PushPromiseFrame>
+  implements HeaderSet<PushPromiseFrame> {
   
-  static final byte TYPE1 = 0x1;
-  static final byte TYPE8 = 0x8;
+  static final byte TYPE = 0x5;
 
-  public static HeadersFrameBuilder make(
-    HeaderSerializer ser) {
-      return new HeadersFrameBuilder(TYPE8, ser);
+  public static PushPromiseFrameBuilder make(HeaderSerializer ser) {
+    return new PushPromiseFrameBuilder(ser);
   }
   
-  public static HeadersFrameBuilder make(
-    boolean withPriority, 
-    HeaderSerializer ser) {
-    return new HeadersFrameBuilder(
-      withPriority?TYPE1:TYPE8, ser);
-  }
-  
-  public static final class HeadersFrameBuilder extends 
-    FrameBuilder<HeadersFrame,HeadersFrameBuilder>
-    implements HeaderSetter<HeadersFrameBuilder> {
+  public static final class PushPromiseFrameBuilder extends 
+    FrameBuilder<PushPromiseFrame,PushPromiseFrameBuilder>
+    implements HeaderSetter<PushPromiseFrameBuilder> {
 
     private final HeaderBlockBuilder headers = 
      HeaderBlock.make();
-    private int priority = 0;
+    private int id;
     
-    protected HeadersFrameBuilder(byte type, HeaderSerializer ser) {
-      super(type);
+    protected PushPromiseFrameBuilder(HeaderSerializer ser) {
+      super(TYPE);
       headers.serializer(ser);
     }
 
@@ -56,52 +46,49 @@ public final class HeadersFrame
     protected void parseRest(
       InputStream in) 
         throws IOException {
-      if (type == TYPE1)
-        this.priority = read32(in);
+      this.id = read32(in);
       headers.parse(in);
     }
  
-    public HeadersFrame get() {
-      
-      return new HeadersFrame(this);
+    public PushPromiseFrame get() {
+      return new PushPromiseFrame(this);
     }
 
-    public HeadersFrameBuilder priority(int p) {
-      checkArgument(inRange(p,0,0x7FFFFFFF));
-      checkState(this.type == TYPE1);
-      this.priority = p;
+    public PushPromiseFrameBuilder id(int id) {
+      checkArgument(inRange(id,0,0x7FFFFFFF));
+      this.id = id;
       return this;
     }
     
-    public HeadersFrameBuilder set(
+    public PushPromiseFrameBuilder set(
       String key,
       String... val) {
       headers.set(key,val);
       return this;
     }
 
-    public HeadersFrameBuilder set(
+    public PushPromiseFrameBuilder set(
       String key, 
       int val) {
       headers.set(key, val);
       return this;
     }
 
-    public HeadersFrameBuilder set(
+    public PushPromiseFrameBuilder set(
       String key, 
       long val) {
       headers.set(key,val);
       return this;
     }
 
-    public HeadersFrameBuilder set(
+    public PushPromiseFrameBuilder set(
       String key, 
       DateTime val) {
       headers.set(key,val);
       return this;
     }
 
-    public HeadersFrameBuilder set(
+    public PushPromiseFrameBuilder set(
       String key, 
       ValueProvider... val) {
       headers.set(key,val);
@@ -111,13 +98,13 @@ public final class HeadersFrame
   }
 
   private final HeaderBlock block;
-  private final int priority;
+  private final int id;
   
-  protected HeadersFrame(
-    HeadersFrameBuilder builder) {
+  protected PushPromiseFrame(
+    PushPromiseFrameBuilder builder) {
       super(builder);
       this.block = builder.headers.get();
-      this.priority = max(0,builder.priority);
+      this.id = max(0,builder.id);
   }
   
   public int size() {
@@ -129,8 +116,7 @@ public final class HeadersFrame
       throws IOException {
     ByteArrayOutputStream out = 
       new ByteArrayOutputStream();
-    if (type == TYPE1)
-      write32(out,priority);
+    write32(out,id);
     block.writeTo(out);
     return out.toByteArray();
   }

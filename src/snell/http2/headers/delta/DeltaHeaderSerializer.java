@@ -6,6 +6,7 @@ import java.io.OutputStream;
 
 import snell.http2.headers.HeaderSerializer;
 import snell.http2.headers.HeaderSet;
+import snell.http2.headers.HeaderSetter;
 
 public class DeltaHeaderSerializer
   implements HeaderSerializer {
@@ -27,7 +28,7 @@ public class DeltaHeaderSerializer
   @Override
   public void deserialize(
     InputStream in, 
-    HeaderSet<?> set) 
+    HeaderSetter<?> set) 
       throws IOException {
     delta.decodeFrom(in, set);
   }

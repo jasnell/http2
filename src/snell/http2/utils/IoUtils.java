@@ -116,6 +116,26 @@ public final class IoUtils {
        out.write(toByteArray(val));
   }
   
+  public static int read32(
+    InputStream in)
+      throws IOException {
+    byte[] buf = new byte[4];
+    int r = in.read(buf);
+    if (r < 4)
+      throw new IOException();
+    return Ints.fromByteArray(buf);
+  }
+  
+  public static long read64(
+    InputStream in)
+      throws IOException {
+    byte[] buf = new byte[8];
+    int r = in.read(buf);
+    if (r < 8)
+      throw new IOException();
+    return Longs.fromByteArray(buf);
+  }
+  
   public static void write64(
     OutputStream out,
     long val)
@@ -128,6 +148,16 @@ public final class IoUtils {
     short val) 
       throws IOException {
         out.write(toByteArray(val));
+  }
+  
+  public static void write16(
+    OutputStream out,
+    int val)
+      throws IOException {
+    byte[] bytes = toByteArray(val);
+    // only write two lsb's
+    out.write(bytes[2]);
+    out.write(bytes[3]);
   }
   
   public static void writeChar(

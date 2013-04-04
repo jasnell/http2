@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Set;
 
 import snell.http2.headers.HeaderSet;
+import snell.http2.headers.HeaderSetter;
 import snell.http2.headers.ValueProvider;
 import snell.http2.headers.delta.Operation.Clone;
 import snell.http2.headers.delta.Operation.Kvsto;
@@ -53,7 +54,7 @@ public final class Delta {
   
   public void decodeFrom(
     InputStream in, 
-    HeaderSet<?> set) throws IOException {
+    HeaderSetter<?> set) throws IOException {
       // Read Group ID
       int g_id = in.read(); // group id!
       if (g_id < 0)

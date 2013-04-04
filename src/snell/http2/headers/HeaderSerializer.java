@@ -13,7 +13,7 @@ public interface HeaderSerializer {
   
   void deserialize(
     InputStream in, 
-    HeaderSet<?> set) 
+    HeaderSetter<?> set) 
       throws IOException;
   
 }
