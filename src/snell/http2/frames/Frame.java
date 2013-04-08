@@ -21,6 +21,7 @@ import java.nio.channels.ReadableByteChannel;
 import snell.http2.headers.HeaderSerializer;
 
 import com.google.common.base.Supplier;
+import com.google.common.primitives.Shorts;
 
 public abstract class Frame<F extends Frame<F>> {
 
@@ -32,7 +33,7 @@ public abstract class Frame<F extends Frame<F>> {
     int r = in.read(header);
     if (r < 4)
       throw new IOException();
-    int length = (header[0] << 16) | header[1];
+    int length = Shorts.fromByteArray(header);
     byte type = header[2];
     byte flags = header[3];
     int stream_id = read32(in);
@@ -278,6 +279,8 @@ public abstract class Frame<F extends Frame<F>> {
     OutputStream out) 
       throws IOException {
     byte[] buffer = preWrite();
+    if (buffer != null)
+      checkArgument(buffer.length <= DEFAULT_MAX_SIZE);
     if (buffer != null)
       write16(out,buffer.length);
     else

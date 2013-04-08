@@ -91,7 +91,6 @@ public final class Delta {
       for (Code code : EPHS)
         for (Operation op : instructions.get(code))
           op.ephemeralExecute(group, keys_to_turn_off,set);
-      adjustHeaderGroupEntries(group, group.storage());
       group.set(set, keys_to_turn_off);
       for (Operation op : instructions.get(EKVSTO))
         op.ephemeralExecute(group, keys_to_turn_off, set);
@@ -266,9 +265,6 @@ public final class Delta {
         storage, 
         group, 
         instructions);
-      // Adjust the existing set of entry indices in the storage
-      // based on use... 
-      adjustHeaderGroupEntries(group, storage);
       return instructions;
   }
    
@@ -337,20 +333,5 @@ public final class Delta {
             op.execute(storage,group);
     }
     
-    private static void adjustHeaderGroupEntries(
-      HeaderGroup group, 
-      Storage storage) {
-//        IntMap ri = new IntMap();
-//        for (int i : group.getIndices()) {
-//          if (!storage.touchIdx(i)) {
-//            Pair<String,ValueSupplier> pair =
-//              storage.lookupfromIndex(i);
-//            int ni = storage.insertVal(pair.one(), pair.two());
-//            ri.put(i, ni);
-//          }
-//        }
-//        group.reindexed(ri);
-//        storage.reindex();
-    }
   
 }

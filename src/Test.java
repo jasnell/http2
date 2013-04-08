@@ -3,20 +3,11 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
 
-import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
-
-import com.google.common.collect.Range;
-
 import snell.http2.frames.Frame;
 import snell.http2.frames.HeadersFrame;
-import snell.http2.frames.SettingsFrame;
-import snell.http2.frames.SettingsFrame.Settings;
 import snell.http2.headers.HeaderSerializer;
 import snell.http2.headers.delta.Delta;
 import snell.http2.headers.delta.DeltaHeaderSerializer;
-import snell.http2.headers.delta.Operation;
-import snell.http2.utils.IntMap;
 
 public class Test {
   
@@ -31,13 +22,28 @@ public class Test {
 
     HeadersFrame frame = 
       HeadersFrame.make(ser)
-        .set(":method", "post")
+        .streamId(6)
         .set(":method", "get")
-        .set(":method", "delete")
-        .set("foo", "bar")
+        .set(":path", "/")
+        .set(":host", "example.org")
+        .set("user-agent", "This is the user agent")
         .get();
 
     frame.writeTo(out);
+    Frame.parse(new ByteArrayInputStream(out.toByteArray()), ser);
+    
+    out = new ByteArrayOutputStream();
+    
+    frame = 
+        HeadersFrame.make(ser)
+          .streamId(6)
+          .set(":method", "get")
+          .set(":path", "/")
+          .set(":host", "example.org")
+          .set("user-agent", "This is the user agent")
+          .get();
+
+      frame.writeTo(out);
   
     System.out.println(Arrays.toString(out.toByteArray()));
 

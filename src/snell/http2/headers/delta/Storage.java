@@ -216,7 +216,7 @@ public class Storage {
   
   protected IntPair locate(String key, ValueSupplier val) {
     int a = -1, b = -1;
-    for (int c = current - 2; c >= 0; c--) {
+    for (int c = current - 1; c >= 0; c--) {
       Item item = lookupItem(c);
       checkNotNull(item);
       if (item.key().equals(key)) {
