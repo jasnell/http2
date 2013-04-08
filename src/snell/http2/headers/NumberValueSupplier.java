@@ -11,7 +11,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Arrays;
 
-import com.google.common.base.Objects;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.common.primitives.UnsignedInteger;
@@ -20,25 +19,34 @@ import com.google.common.primitives.UnsignedLong;
 /**
  * Encodes unsigned, variable-length integers (and longs)
  */
-public class NumberValueProvider 
-  implements ValueProvider {
+public class NumberValueSupplier 
+  extends ValueSupplier<Number> {
 
   private final byte[] val;
-  private transient int hash = -1;
+  private transient int hash = 1;
   
-  public NumberValueProvider(int val) {
+  public NumberValueSupplier(int val) {
+    super(NUMBER);
     this.val = unsignedBytes(fromIntBits(val));
   }
   
-  public NumberValueProvider(long val) {
+  protected NumberValueSupplier(byte flags, long val) {
+    super(flags);
     this.val = unsignedBytes(fromLongBits(val));
   }
   
-  public NumberValueProvider(UnsignedInteger uint) {
+  public NumberValueSupplier(long val) {
+    super(NUMBER);
+    this.val = unsignedBytes(fromLongBits(val));
+  }
+  
+  public NumberValueSupplier(UnsignedInteger uint) {
+    super(NUMBER);
     this.val = unsignedBytes(uint);
   }
   
-  public NumberValueProvider(UnsignedLong ulng) {
+  public NumberValueSupplier(UnsignedLong ulng) {
+    super(NUMBER);
     this.val = unsignedBytes(ulng);
   }
   
@@ -72,8 +80,10 @@ public class NumberValueProvider
 
   @Override
   public int hashCode() {
-    if (hash == -1) 
-      hash = Objects.hashCode(val);
+    if (hash == 1) {
+      hash = super.hashCode();
+      hash = 31 * hash + Arrays.hashCode(val);
+    }
     return hash;
   }
 
@@ -81,21 +91,16 @@ public class NumberValueProvider
   public boolean equals(Object obj) {
     if (this == obj)
       return true;
-    if (obj == null)
+    if (!super.equals(obj))
       return false;
     if (getClass() != obj.getClass())
       return false;
-    NumberValueProvider other = (NumberValueProvider) obj;
+    NumberValueSupplier other = (NumberValueSupplier) obj;
     if (!Arrays.equals(val, other.val))
       return false;
     return true;
   }
 
-  @Override
-  public int flags() {
-    return 0x40;
-  }
-  
   public String toString() {
     return val.length == 4 ?
       fromIntBits(Ints.fromByteArray(val)).toString() :
@@ -103,28 +108,38 @@ public class NumberValueProvider
   }
   
   public static class NumberValueParser 
-    implements ValueParser<NumberValueProvider> {
+    implements ValueParser<NumberValueSupplier> {
     private static final UnsignedLong MAXUINT = 
       fromLongBits(0xFFFFFFFFL);
     @Override
-    public NumberValueProvider parse(
+    public NumberValueSupplier parse(
       InputStream in, 
-      int flags) 
+      byte flags) 
         throws IOException {
       long l = uvarint2long(in);
       UnsignedLong ulng = 
         fromLongBits(l);
       return ulng.compareTo(MAXUINT) > 0 ?
-        new NumberValueProvider(ulng) :
-        new NumberValueProvider((int)l);
+        new NumberValueSupplier(ulng) :
+        new NumberValueSupplier((int)l);
     }
   }
   
-  public static NumberValueProvider create(int val) {
-    return new NumberValueProvider(val);
+  public static NumberValueSupplier create(int val) {
+    return new NumberValueSupplier(val);
   }
   
-  public static NumberValueProvider create(long val) {
-    return new NumberValueProvider(val);
+  public static NumberValueSupplier create(long val) {
+    return new NumberValueSupplier(val);
+  }
+
+  @Override
+  public Number get() {
+    return longVal();
+  }
+
+  @Override
+  public int length() {
+    return val.length;
   }
 }

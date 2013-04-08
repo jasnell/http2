@@ -2,7 +2,7 @@ package snell.http2.headers;
 
 import org.joda.time.DateTime;
 
-
+@SuppressWarnings("rawtypes")
 public interface HeaderSetter<B extends HeaderSetter<B>> {
 
   public abstract B set(String key, String... val);
@@ -13,6 +13,6 @@ public interface HeaderSetter<B extends HeaderSetter<B>> {
 
   public abstract B set(String key, DateTime val);
 
-  public abstract B set(String key, ValueProvider... val);
+  public abstract B set(String key, ValueSupplier... val);
 
 }

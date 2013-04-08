@@ -7,14 +7,20 @@ public final class IntMap {
   private int[] keys, vals;
   private int size;
   private final int growth_factor;
+  private final int initial;
   
   public IntMap() {
-    this(20);
+    this(255);
   }
   
   public IntMap(int initial_capacity) {
     reset(initial_capacity);
+    this.initial = initial_capacity;
     growth_factor = Math.max(1, (int)(initial_capacity*0.25));
+  }
+  
+  public void reset() {
+    reset(initial);
   }
   
   public void reset(int initial_capacity) {

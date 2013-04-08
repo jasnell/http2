@@ -5,6 +5,8 @@ public final class PingFrame
   
   static final byte TYPE = 0x6;
   
+  private static final byte FLAG_PONG = 0x2;
+  
   public static PingFrameBuilder make() {
     return new PingFrameBuilder();
   }
@@ -13,6 +15,14 @@ public final class PingFrame
     extends FrameBuilder<PingFrame,PingFrameBuilder> {
     protected PingFrameBuilder() {
       super(TYPE);
+    }
+    public PingFrameBuilder pong() {
+      this.flag(FLAG_PONG, true);
+      return this;
+    }
+    public PingFrameBuilder ping(boolean  on) {
+      this.flag(FLAG_PONG, on);
+      return this;
     }
     @Override
     public PingFrame get() {
@@ -23,6 +33,10 @@ public final class PingFrame
   protected PingFrame(
     PingFrameBuilder builder) {
       super(builder);
+  }
+  
+  public boolean pong() {
+    return this.flag(FLAG_PONG);
   }
 
 }

@@ -10,24 +10,20 @@ import org.joda.time.DateTime;
  * total number of seconds that have elapsed since 
  * the NEW_EPOCH (1990-01-01T00:00:00Z)
  */
-public class DateTimeValueProvider 
-  extends NumberValueProvider {
+public class DateTimeValueSupplier 
+  extends NumberValueSupplier {
 
-  public DateTimeValueProvider(long v) {
-    super(v);
+  public DateTimeValueSupplier(long v) {
+    super(DATE,v);
   }
   
-  public DateTimeValueProvider(DateTime dt) {
-    super(calc(dt));
+  public DateTimeValueSupplier(DateTime dt) {
+    super(DATE,calc(dt));
   }
   
   private static long calc(DateTime dt) {
     if (dt == null) return -1;
     return dt.getMillis() / 1000;
-  }
-  
-  public int flags() {
-    return 0x80;
   }
 
   public DateTime dateTimeValue() {
@@ -39,17 +35,17 @@ public class DateTimeValueProvider
   }
   
   public static class DateTimeValueParser 
-    implements ValueParser<DateTimeValueProvider> {
+    implements ValueParser<DateTimeValueSupplier> {
     @Override
-    public DateTimeValueProvider parse(
+    public DateTimeValueSupplier parse(
       InputStream in, 
-      int flags) 
+      byte flags) 
         throws IOException {     
-      return new DateTimeValueProvider(uvarint2long(in));
+      return new DateTimeValueSupplier(uvarint2long(in));
     }    
   }
   
-  public static DateTimeValueProvider create(DateTime dt) {
-    return new DateTimeValueProvider(dt);
+  public static DateTimeValueSupplier create(DateTime dt) {
+    return new DateTimeValueSupplier(dt);
   }
 }

@@ -1,5 +1,7 @@
 package snell.http2.headers;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -9,6 +11,7 @@ import com.google.common.base.Splitter;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMultimap;
 
+@SuppressWarnings("rawtypes")
 public interface HeaderSet<X extends HeaderSet<X>> 
   extends Iterable<String> {
 
@@ -18,7 +21,7 @@ public interface HeaderSet<X extends HeaderSet<X>>
     implements Supplier<H>, 
                HeaderSetter<B> {
 
-    protected ImmutableMultimap.Builder<String,ValueProvider> map = 
+    protected ImmutableMultimap.Builder<String,ValueSupplier> map = 
       ImmutableMultimap.builder();
     protected HeaderSerializer ser;
     
@@ -40,16 +43,22 @@ public interface HeaderSet<X extends HeaderSet<X>>
         .omitEmptyStrings()
         .trimResults();
     
+    protected static String tlc(String key) {
+      checkNotNull(key);
+      return key.toLowerCase();
+    }
+    
     @Override
     public B set(String key, String... val) {
+      key = tlc(key);
       if (val != null) {
         if (key.equalsIgnoreCase("cookie")) {
           for (String v : val) {
             for (String crumb : splitter.split(v))
-              map.put(key, new StringValueProvider(crumb));
+              map.put(key, new StringValueSupplier(crumb));
           }
         } else {
-          map.put(key, new StringValueProvider(val));
+          map.put(key, new StringValueSupplier(val));
         }
       }
       return (B)this;
@@ -57,26 +66,27 @@ public interface HeaderSet<X extends HeaderSet<X>>
 
     @Override
     public B set(String key, int val) {
-      map.put(key, new NumberValueProvider(val));
+      map.put(tlc(key), new NumberValueSupplier(val));
       return (B)this;
     }
     
     @Override
     public B set(String key, long val) {
-      map.put(key, new NumberValueProvider(val));
+      map.put(tlc(key), new NumberValueSupplier(val));
       return (B)this;
     }
     
     @Override
     public B set(String key, DateTime val) {
-      map.put(key, new DateTimeValueProvider(val));
+      map.put(tlc(key), new DateTimeValueSupplier(val));
       return (B)this;
     }
 
     @Override
-    public B set(String key, ValueProvider... val) {
+    public B set(String key, ValueSupplier... val) {
+      key = tlc(key);
       if (val != null) {
-        for (ValueProvider v : val)
+        for (ValueSupplier v : val)
           map.put(key,v);
       }
       return (B)this;
@@ -84,9 +94,9 @@ public interface HeaderSet<X extends HeaderSet<X>>
 
   }
   
-  boolean contains(String key, ValueProvider val);
+  boolean contains(String key, ValueSupplier val);
   
-  Iterable<ValueProvider> get(String key);
+  Iterable<ValueSupplier> get(String key);
   
   int size();
   

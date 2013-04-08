@@ -17,7 +17,7 @@ import snell.http2.headers.HeaderBlock.HeaderBlockBuilder;
 import snell.http2.headers.HeaderSerializer;
 import snell.http2.headers.HeaderSet;
 import snell.http2.headers.HeaderSetter;
-import snell.http2.headers.ValueProvider;
+import snell.http2.headers.ValueSupplier;
 
 public final class PushPromiseFrame 
   extends Frame<PushPromiseFrame>
@@ -88,9 +88,10 @@ public final class PushPromiseFrame
       return this;
     }
 
+    @SuppressWarnings("rawtypes")
     public PushPromiseFrameBuilder set(
       String key, 
-      ValueProvider... val) {
+      ValueSupplier... val) {
       headers.set(key,val);
       return this;
     }
@@ -121,8 +122,9 @@ public final class PushPromiseFrame
     return out.toByteArray();
   }
 
+  @SuppressWarnings("rawtypes")
   @Override
-  public Iterable<ValueProvider> get(String key) {
+  public Iterable<ValueSupplier> get(String key) {
     return block.get(key);
   }
 
@@ -131,8 +133,9 @@ public final class PushPromiseFrame
     return block.iterator();
   }
 
+  @SuppressWarnings("rawtypes")
   @Override
-  public boolean contains(String key, ValueProvider val) {
+  public boolean contains(String key, ValueSupplier val) {
     return block.contains(key,val);
   }
 }

@@ -1,14 +1,18 @@
 package snell.http2.headers;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Iterator;
 
 import com.google.common.collect.ImmutableMultimap;
 
+
 /**
  * Storage for headers... pretty simple
  */
+@SuppressWarnings("rawtypes")
 public final class HeaderBlock 
   implements HeaderSet<HeaderBlock> {
 
@@ -24,7 +28,7 @@ public final class HeaderBlock
   }
   
   private final HeaderSerializer ser;  
-  private final ImmutableMultimap<String,ValueProvider> map;
+  private final ImmutableMultimap<String,ValueSupplier> map;
   
   protected HeaderBlock(
     HeaderBlockBuilder builder) {
@@ -42,9 +46,14 @@ public final class HeaderBlock
     return map.size();
   }
     
+  protected static String tlc(String key) {
+    checkNotNull(key);
+    return key.toLowerCase();
+  }
+  
   @Override
-  public Iterable<ValueProvider> get(String key) {
-    return map.get(key);
+  public Iterable<ValueSupplier> get(String key) {
+    return map.get(tlc(key));
   }
 
   @Override
@@ -53,7 +62,8 @@ public final class HeaderBlock
   }
 
   @Override
-  public boolean contains(String key, ValueProvider val) {
+  public boolean contains(String key, ValueSupplier val) {
+    key = tlc(key);
     if (!map.containsKey(key)) return false;
     return map.get(key).contains(val);
   }

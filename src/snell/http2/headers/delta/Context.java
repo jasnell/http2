@@ -8,21 +8,20 @@ import com.google.common.cache.CacheBuilder;
 
 public class Context {
 
-  private Cache<Integer,HeaderGroup> groups = 
+  private Cache<Byte,HeaderGroup> groups = 
     CacheBuilder.newBuilder().build();
   
-  public HeaderGroup headerGroup(int index) {
+  public HeaderGroup headerGroup(byte index) {
     return headerGroup(index,false);
   }
   
-  public HeaderGroup headerGroup(int index, boolean create) {
+  public HeaderGroup headerGroup(byte index, boolean create) {
     try {
       return !create? 
         groups.getIfPresent(index) :
         groups.get(index, new Callable<HeaderGroup>() {
           public HeaderGroup call() throws Exception {
-            Storage storage = new Storage();
-            return new HeaderGroup(storage);
+            return new HeaderGroup(Storage.create());
           }
         });
     } catch (Throwable t) {

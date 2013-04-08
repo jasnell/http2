@@ -299,4 +299,5 @@ public abstract class Frame<F extends Frame<F>> {
   
   protected void writeRest(OutputStream out)
     throws IOException {}
+  
 }

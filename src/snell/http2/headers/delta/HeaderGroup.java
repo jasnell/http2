@@ -6,16 +6,17 @@ import java.util.Set;
 import com.google.common.base.Objects;
 
 import snell.http2.headers.HeaderSetter;
-import snell.http2.headers.ValueProvider;
-import snell.http2.utils.IntMap;
+import snell.http2.headers.ValueSupplier;
+import snell.http2.headers.delta.Storage.PopListener;
+import snell.http2.utils.IntPair;
 import snell.http2.utils.Pair;
-import snell.http2.utils.MLU.ReindexListener;
 
 /**
  * Header Group represents a currently active set of Headers
  */
+@SuppressWarnings("rawtypes")
 public final class HeaderGroup 
-  implements ReindexListener {
+  implements PopListener {
 
   private Set<Integer> group = 
     new LinkedHashSet<Integer>();
@@ -23,15 +24,15 @@ public final class HeaderGroup
   
   public HeaderGroup(Storage storage) {
     this.storage = storage;
-    storage.addReindexListener(this);
   }
   
   public Storage storage() {
     return storage;
   }
   
-  public boolean hasKV(String key, ValueProvider val) {
-    int index = storage.lookupIndex(key, val);
+  public boolean hasKV(String key, ValueSupplier val) {
+    IntPair pair = storage.locate(key, val);
+    int index = pair.two();
     return index > -1 && group.contains(index);
   }
   
@@ -68,35 +69,25 @@ public final class HeaderGroup
   
   public void set(HeaderSetter<?> set) {
     for (int idx : getIndices()) {
-      Pair<String, ValueProvider> entry = 
-        storage.lookupfromIndex(idx);
+      Pair<String, ValueSupplier> entry = 
+        storage.lookup(idx);
       set.set(entry.one(), entry.two());
     }
   }
   
-  public void set(HeaderSetter<?> set, Set<Pair<String,ValueProvider>> except) {
+  public void set(
+    HeaderSetter<?> set, 
+    Set<Pair<String,ValueSupplier>> except) {
     for (int idx : getIndices()) {
-      Pair<String, ValueProvider> entry = 
-        storage.lookupfromIndex(idx);
+      Pair<String, ValueSupplier> entry = 
+        storage.lookup(idx);
       if (!except.contains(entry))
         set.set(entry.one(), entry.two());
     }
   }
 
   @Override
-  /**
-   * Called when the underlying MLU storage cache
-   * has been reindexed.. updates the internal HeaderGroup
-   * ID's to match the current state of the MLU index
-   */
-  public void reindexed(IntMap changes) {
-    Set<Integer> new_dict = 
-      new LinkedHashSet<Integer>();
-    for (int key : group)
-      new_dict.add(
-        changes.contains(key)?
-          changes.get(key):
-          key);
-    this.group = new_dict;
+  public void popped(int idx) {
+    this.group.remove(idx);
   }
 }

@@ -3,12 +3,11 @@ package snell.http2.headers;
 import static snell.http2.utils.IoUtils.int2uvarint;
 import static snell.http2.utils.IoUtils.uvarint2int;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Arrays;
-
-import com.google.common.base.Objects;
 
 /**
  * Encodes a length-prefixed stream of binary octets.
@@ -16,13 +15,14 @@ import com.google.common.base.Objects;
  * 
  * TODO: There are many obvious improvements to be made here.
  */
-public class BinaryDataValueProvider 
-  implements ValueProvider {
+public class BinaryValueSupplier 
+  extends ValueSupplier<InputStream> {
 
   private byte[] data;
-  private transient int hash = -1;
+  private transient int hash = 1;
   
-  public BinaryDataValueProvider(byte[] data) {
+  public BinaryValueSupplier(byte[] data) {
+    super(BINARY);
     this.data = data;
   }
   
@@ -38,11 +38,10 @@ public class BinaryDataValueProvider
 
   @Override
   public int hashCode() {
-    if (hash == -1)
-      hash = 
-        Objects.hashCode(
-          getClass(),
-          data);
+    if (hash == 1) {
+      hash = super.hashCode();
+      hash = 31 * hash + Arrays.hashCode(data);
+    }
     return hash;
   }
 
@@ -50,37 +49,41 @@ public class BinaryDataValueProvider
   public boolean equals(Object obj) {
     if (this == obj)
       return true;
-    if (obj == null)
+    if (!super.equals(obj))
       return false;
     if (getClass() != obj.getClass())
       return false;
-    BinaryDataValueProvider other = (BinaryDataValueProvider) obj;
+    BinaryValueSupplier other = (BinaryValueSupplier) obj;
     if (!Arrays.equals(data, other.data))
       return false;
     return true;
   }
 
-  
   public String toString() {
     return Arrays.toString(data);
   }
-  
-  @Override
-  public int flags() {
-    return 0xC0;
-  }
-  
+
   public static class BinaryDataValueParser 
-    implements ValueParser<BinaryDataValueProvider> {
-    public BinaryDataValueProvider parse(
+    implements ValueParser<BinaryValueSupplier> {
+    public BinaryValueSupplier parse(
       InputStream in, 
-      int flags) 
+      byte flags) 
         throws IOException {
       byte[] data = new byte[uvarint2int(in)];
       in.read(data);
-      return new BinaryDataValueProvider(data);
+      return new BinaryValueSupplier(data);
     }
     
+  }
+
+  @Override
+  public InputStream get() {
+    return new ByteArrayInputStream(data);
+  }
+
+  @Override
+  public int length() {
+    return data.length;
   }
 
 }

@@ -166,6 +166,10 @@ public final class SettingsFrame
       this.set = entries;
   }
   
+  public boolean clearPersisted() {
+    return this.flag(FLAG_CLEAR_PERSISTED);
+  }
+  
   public Entry get(Settings setting) {
     for (Entry entry : set) {
       if (entry.setting() == setting)

@@ -3,8 +3,16 @@ package snell.http2.headers.delta;
 import static snell.http2.headers.delta.Operation.makeClone;
 import static snell.http2.headers.delta.Operation.makeKvsto;
 import static snell.http2.headers.delta.Operation.makeToggl;
-import static snell.http2.headers.delta.Operation.Code.*;
+import static snell.http2.headers.delta.Operation.makeTrang;
+import static snell.http2.headers.delta.Operation.Code.CLONE;
 import static snell.http2.headers.delta.Operation.Code.ECLONE;
+import static snell.http2.headers.delta.Operation.Code.EKVSTO;
+import static snell.http2.headers.delta.Operation.Code.ETOGGL;
+import static snell.http2.headers.delta.Operation.Code.ETRANG;
+import static snell.http2.headers.delta.Operation.Code.KVSTO;
+import static snell.http2.headers.delta.Operation.Code.TOGGL;
+import static snell.http2.headers.delta.Operation.Code.TRANG;
+import static snell.http2.headers.delta.Operation.Code.get;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -18,30 +26,29 @@ import java.util.Set;
 
 import snell.http2.headers.HeaderSet;
 import snell.http2.headers.HeaderSetter;
-import snell.http2.headers.ValueProvider;
-import snell.http2.headers.delta.Operation.Clone;
-import snell.http2.headers.delta.Operation.Kvsto;
+import snell.http2.headers.ValueSupplier;
+import snell.http2.headers.delta.Operation.Code;
 import snell.http2.headers.delta.Operation.Toggl;
-import snell.http2.headers.delta.Operation.Trang;
-import snell.http2.utils.IntMap;
+import snell.http2.utils.IntPair;
 import snell.http2.utils.Pair;
 
 import com.google.common.base.Objects;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Range;
-import com.google.common.collect.TreeMultimap;
 
+@SuppressWarnings("rawtypes")
 public final class Delta {
 
   private final Context context = 
     new Context();
   private final Context resp_context = 
     new Context();
-  private final int group_id;
+  private final byte group_id;
   
-  public Delta(int group_id) {
+  public Delta(byte group_id) {
     this.group_id = group_id;
   }
   
@@ -52,95 +59,69 @@ public final class Delta {
       .toString();
   }
   
+  private static final Code[] EPHS = {ETOGGL,ETRANG,ECLONE};
+  
   public void decodeFrom(
     InputStream in, 
     HeaderSetter<?> set) throws IOException {
       // Read Group ID
-      int g_id = in.read(); // group id!
-      if (g_id < 0)
-        throw new IllegalStateException(); //Obviously that's not gonna work   
-      ImmutableMultimap.Builder<String,Operation> ops = 
+      byte g_id = (byte) in.read();
+      ImmutableMultimap.Builder<Code,Operation> ops = 
         ImmutableMultimap.builder();
-      byte[] header = new byte[2];   
+      byte[] header = new byte[2];
       while(in.read(header) > -1) {
         Operation.Code code = 
           get(header[0]);
         while (header[1]-- >= 0)
-          ops.put(code.label(), code.parse(in));
+          ops.put(
+            code, 
+            code.parse(in));
       }
       HeaderGroup group = 
-        resp_context.headerGroup(g_id, true);
-      Multimap<String,Operation> instructions = 
+        resp_context
+          .headerGroup(g_id, true);
+      Multimap<Code,Operation> instructions = 
         ops.build();
       Delta.executeInstructions(
         group.storage(), 
         group, 
         instructions);
-      // ephemeral toggls...... bleh, this is ugly... need to improve this
-      // issue: we need to grab the value references before calling
-      // adjustHeaderGroupEntries, then we need to go through and determine
-      // if it's a toggl on or toggl off... will refactor this so it's a 
-      // cleaner implementation later on.
-      Set<Pair<String,ValueProvider>> keys_to_turn_off = 
-        new HashSet<Pair<String,ValueProvider>>();
-      for (Operation op : instructions.get("etoggl")) {
-        Toggl toggl = (Toggl) op;
-        int idx = toggl.index();
-        Pair<String,ValueProvider> pair = 
-            group.storage().lookupfromIndex(idx);
-          if (pair == null)
-            throw new RuntimeException("Crap!");
-        if (group.hasEntry(idx)) {
-          // going to turn it off
-          keys_to_turn_off.add(pair);
-        } else {
-          // going to turn it on, temporarily, just for his headerset
-          set.set(pair.one(),pair.two());
-        }
-      }
-      // ephemeral clones
-      for (Operation op : instructions.get("eclone")) {
-        Clone clone = (Clone) op;
-        int idx = clone.index();
-        String key = group.storage().lookupKeyFromIndex(idx);
-        if (key == null)
-          throw new RuntimeException("Crap!");
-        set.set(key, clone.val());   
-      }
+      Set<Pair<String,ValueSupplier>> keys_to_turn_off = 
+        new HashSet<Pair<String,ValueSupplier>>();
+      for (Code code : EPHS)
+        for (Operation op : instructions.get(code))
+          op.ephemeralExecute(group, keys_to_turn_off,set);
       adjustHeaderGroupEntries(group, group.storage());
       group.set(set, keys_to_turn_off);
-      // ephemeral kvsto operation...
-      for (Operation op : instructions.get("ekvsto")) {
-        Kvsto ref = (Kvsto) op;
-        set.set(ref.key(), ref.val());
-      }
+      for (Operation op : instructions.get(EKVSTO))
+        op.ephemeralExecute(group, keys_to_turn_off, set);
   }
   
   // Serialization of Operations...
   
   private final Operation.Code[] SER_ORDER = {
-    STOGGL,
+    TOGGL,
     ETOGGL,
-    STRANG,
+    TRANG,
     ETRANG,
     ECLONE,
     EKVSTO,
-    SCLONE,
-    SKVSTO
+    CLONE,
+    KVSTO
   };
   
   public void encodeTo(
     OutputStream buffer, 
     HeaderSet<?> headers) 
       throws IOException {
-    Multimap<String,Operation> instructions = 
+    Multimap<Code,Operation> instructions = 
       makeOperations(headers,group_id);
     preprocessToggles(instructions);
-    buffer.write((byte)group_id);
+    buffer.write(group_id);
     for (Operation.Code code : SER_ORDER)
       outputOps(
         buffer, 
-        instructions.get(code.label()), 
+        instructions.get(code), 
         code.code());
   }
   
@@ -163,9 +144,9 @@ public final class Delta {
    * in fact we could end up wasting space
    */
   private void preprocessToggles(
-    Multimap<String,Operation> instructions) {
+    Multimap<Code,Operation> instructions) {
       Collection<Operation> toggls = 
-        instructions.get("stoggl");
+        instructions.get(TOGGL);
       if (toggls.size() < 7) {
         // it's likely not going to be worth the extra opcode overhead
         // so let's skip out and not worry about compacting them
@@ -175,7 +156,7 @@ public final class Delta {
       List<Operation> toggs = 
         new ArrayList<Operation>();
       Collection<Operation> trang = 
-        instructions.get("strang");
+        instructions.get(TRANG);
       Iterator<Operation> ops = 
         toggls.iterator();
       while(ops.hasNext()) {
@@ -203,8 +184,8 @@ public final class Delta {
           }
         }
       }
-      instructions.replaceValues("stoggl", toggs);
-      instructions.putAll("strang", trang);
+      instructions.replaceValues(TOGGL, toggs);
+      instructions.putAll(TRANG, trang);
   }
   
   private void rangeToOperation(
@@ -212,9 +193,9 @@ public final class Delta {
     Collection<Operation> toggls, 
     Collection<Operation> trang) {
     if (r.upperEndpoint() - r.lowerEndpoint() > 0) {
-      trang.add(Operation.makeTrang(r.lowerEndpoint(), r.upperEndpoint()));
+      trang.add(makeTrang(r.lowerEndpoint(), r.upperEndpoint()));
     } else {
-      toggls.add(Operation.makeToggl(r.lowerEndpoint()));
+      toggls.add(makeToggl(r.lowerEndpoint()));
     }
   }
   
@@ -226,13 +207,15 @@ public final class Delta {
     if (ops == null) return;
     int ops_idx = 0;
     int ops_len = ops.size();
-    Iterator<Operation> i = ops.iterator();
+    Iterator<Operation> i = 
+      ops.iterator();
     while (ops_len > ops_idx) {
       int ops_to_go = ops_len - ops_idx;
+      int batch = Math.min(ops_to_go, 256);
       int iteration_end = 
-        Math.min(ops_to_go, 256) + ops_idx;
+        batch + ops_idx;
       buffer.write(opcode);
-      buffer.write((byte)(Math.min(256, ops_to_go) - 1));
+      buffer.write((byte)(batch - 1));
       for (int x = ops_idx; x < iteration_end; x++) {
         i.next().writeTo(buffer);
         ops_idx++;
@@ -240,42 +223,51 @@ public final class Delta {
     }
   }
   
-  private Multimap<String,Operation> makeOperations(
+  private Multimap<Code,Operation> makeOperations(
     HeaderSet<?> headers, 
-    int group_id) {
+    byte group_id) {
     return makeOperations(
       headers, 
       context.headerGroup(
         group_id, true));
   }
   
-  public static Multimap<String,Operation> makeOperations(
+  private static Multimap<Code,Operation> makeOperations(
     HeaderSet<?> headers, 
     HeaderGroup group) {
       Storage storage = 
         group.storage();
-      Multimap<String,Operation> instructions =
-        TreeMultimap.create();
+      Multimap<Code,Operation> instructions =
+        HashMultimap.create();
       for (int idx : group.getIndices()) {
-        Pair<String,ValueProvider> pair =
-          storage.lookupfromIndex(idx);
-        if (!headers.contains(pair.one(), pair.two()))
+        Pair<String,ValueSupplier> pair =
+          storage.lookup(idx);
+        // If our headers do not contain an existing key-value pair,
+        // Create a TOGGL to remove it...
+        if (!headers.contains(
+          pair.one(), 
+          pair.two()))
           instructions.put(
-            "stoggl", 
+            TOGGL, 
             Operation.makeToggl(idx));
       }
+      // Now go through the current header set to see what we're turning on
       for (String key : headers)
-        for (ValueProvider val : headers.get(key))
+        for (ValueSupplier<?> val : headers.get(key))
           processKv(
             group, 
             storage, 
             key, 
             val,
             instructions);
+      // Once we have constructed our set of operations,
+      // execute them to update our header group state
       executeInstructions(
         storage, 
         group, 
         instructions);
+      // Adjust the existing set of entry indices in the storage
+      // based on use... 
       adjustHeaderGroupEntries(group, storage);
       return instructions;
   }
@@ -294,97 +286,71 @@ public final class Delta {
       HeaderGroup group, 
       Storage storage, 
       String key, 
-      ValueProvider val, 
-      Multimap<String,Operation> instructions) {
-      if (group.hasKV(key, val))
+      ValueSupplier<?> val, 
+      Multimap<Code,Operation> instructions) {
+      IntPair pair = 
+        storage.locate(key, val);
+      int kidx = pair.one();
+      int vidx = pair.two();
+      // There's nothing to do, the header group already contains this pair
+      if (vidx > -1 && group.hasEntry(vidx))
         return false;
-      Pair<Integer,Integer> pair = 
-        storage.findEntryIdx(key, val);
       if (ALWAYS_EREF.contains(key)) {
-        if (pair.one() > -1) {
+        if (kidx > -1) {
           instructions.put(
-            "eclone", 
-            makeClone(pair.one(),val));
+            ECLONE, 
+            makeClone(kidx,val));
         } else {
           instructions.put(
-            "ekvsto", 
-            makeKvsto(key, val));
+            EKVSTO, 
+            makeKvsto(key,val));
         }
         return true;
       }
-      if (pair.two() > -1 && 
-          !group.hasEntry(pair.two())) {
+      if (vidx > -1) // TOGGL ON
         instructions.put(
-          "stoggl", 
-          makeToggl(pair.two()));
-      } else if (pair.one() > -1) {
+          TOGGL, 
+          makeToggl(vidx));
+      else if (kidx > -1)
         instructions.put(
-          "sclone", 
-          makeClone(pair.one(), val));
-      } else {
+          CLONE, 
+          makeClone(kidx, val));
+      else
         instructions.put(
-          "skvsto", 
+          KVSTO, 
           makeKvsto(key, val));
-      }
       return true;
     }
+    
+    private static final Code[] EXECUTE_ORDER = {
+      TOGGL,
+      TRANG,
+      CLONE,
+      KVSTO};
     
     private static void executeInstructions(
       Storage storage, 
       HeaderGroup group, 
-      Multimap<String,Operation> instructions) {
-        for (Operation op : instructions.get("stoggl"))
-          executeOperation(storage, group, op);
-        for (Operation op : instructions.get("strang"))
-          executeOperation(storage, group, op);
-        for (Operation op : instructions.get("sclone")) {
-          Operation.Clone clone = (Clone) op;
-          int index = clone.index();
-          String key = 
-            storage.lookupKeyFromIndex(index);
-          if (key == null)
-            throw new RuntimeException("Crap!");
-          executeOperation(storage, group, clone.asKvsto(key));        
-        }
-        for (Operation op : instructions.get("skvsto"))
-          executeOperation(storage, group, op);
-    }
-    
-    private static void executeOperation(
-      Storage storage, 
-      HeaderGroup group, 
-      Operation op) {
-        if (op instanceof Operation.Toggl) {
-          Operation.Toggl toggl = (Toggl) op;
-          group.toggle(toggl.index());
-        } else if (op instanceof Operation.Trang) {
-          Operation.Trang trang = (Trang) op;
-          for (int n = trang.start(); n <= trang.end(); n++)
-            group.toggle(n);
-        } else if (op instanceof Operation.Clone) {
-          throw new RuntimeException();
-        } else if (op instanceof Operation.Kvsto) {
-          Operation.Kvsto kvsto = (Kvsto) op;
-          int index = storage.insertVal(kvsto.key(), kvsto.val());
-          group.toggle(index);
-        }
-        
+      Multimap<Code,Operation> instructions) {
+        for (Code code : EXECUTE_ORDER)
+          for (Operation op : instructions.get(code))
+            op.execute(storage,group);
     }
     
     private static void adjustHeaderGroupEntries(
       HeaderGroup group, 
       Storage storage) {
-        IntMap ri = new IntMap();
-        for (int i : group.getIndices()) {
-          if (!storage.touchIdx(i)) {
-            Pair<String,ValueProvider> pair =
-              storage.lookupfromIndex(i);
-            int ni = storage.insertVal(pair.one(), pair.two());
-            ri.put(i, ni);
-          }
-        }
-        group.reindexed(ri);
-        storage.reindex();
+//        IntMap ri = new IntMap();
+//        for (int i : group.getIndices()) {
+//          if (!storage.touchIdx(i)) {
+//            Pair<String,ValueSupplier> pair =
+//              storage.lookupfromIndex(i);
+//            int ni = storage.insertVal(pair.one(), pair.two());
+//            ri.put(i, ni);
+//          }
+//        }
+//        group.reindexed(ri);
+//        storage.reindex();
     }
   
 }

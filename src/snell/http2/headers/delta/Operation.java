@@ -6,79 +6,77 @@ import static snell.http2.utils.IoUtils.uvarint2int;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Set;
 
 import com.google.common.base.Objects;
-import com.google.common.collect.Range;
 import com.google.common.primitives.UnsignedInteger;
 
-import snell.http2.headers.BinaryDataValueProvider.BinaryDataValueParser;
-import snell.http2.headers.DateTimeValueProvider.DateTimeValueParser;
-import snell.http2.headers.NumberValueProvider.NumberValueParser;
-import snell.http2.headers.StringValueProvider.StringValueParser;
-import snell.http2.headers.ValueProvider;
-import snell.http2.headers.ValueProvider.ValueParser;
+import snell.http2.headers.BinaryValueSupplier.BinaryDataValueParser;
+import snell.http2.headers.DateTimeValueSupplier.DateTimeValueParser;
+import snell.http2.headers.HeaderSetter;
+import snell.http2.headers.NumberValueSupplier.NumberValueParser;
+import snell.http2.headers.StringValueSupplier.StringValueParser;
+import snell.http2.headers.ValueSupplier;
+import snell.http2.headers.ValueSupplier.ValueParser;
+import snell.http2.utils.Pair;
 
-public abstract class Operation 
-  implements Comparable<Operation> {
+public abstract class Operation {
 
   public static enum Code {
-    STOGGL((byte)0x0, "stoggl") {
+    TOGGL((byte)0x0) {
       public Operation parse(InputStream in) throws IOException {
         return Toggl.parse(in);
       }
     },
-    ETOGGL((byte)0x1, "etoggl") {
+    ETOGGL((byte)0x1) {
       public Operation parse(InputStream in) throws IOException {
         return Toggl.parse(in);
       }
     },
-    STRANG((byte)0x2, "strang") {
+    TRANG((byte)0x2) {
       public Operation parse(InputStream in) throws IOException {
         return Trang.parse(in);
       }
     },
-    ETRANG((byte)0x3, "etrang") {
+    ETRANG((byte)0x3) {
       public Operation parse(InputStream in) throws IOException {
         return Trang.parse(in);
       }
     },
-    SKVSTO((byte)0x4, "skvsto") {
+    KVSTO((byte)0x4) {
       public Operation parse(InputStream in) throws IOException {
         return Kvsto.parse(in);
       }
     },
-    EKVSTO((byte)0x5, "ekvsto") {
+    EKVSTO((byte)0x5) {
       public Operation parse(InputStream in) throws IOException {
         return Kvsto.parse(in);
       }
     },
-    SCLONE((byte)0x6, "sclone") {
+    CLONE((byte)0x6) {
       public Operation parse(InputStream in) throws IOException {
         return Clone.parse(in);
       }
     },
-    ECLONE((byte)0x7, "eclone") {
+    ECLONE((byte)0x7) {
       public Operation parse(InputStream in) throws IOException {
         return Clone.parse(in);
       }
     }
     ;
     private final byte code;
-    private final String lbl;
-    Code(byte code, String lbl) {
+    Code(byte code) {
       this.code = code;
-      this.lbl = lbl;
     }
-    public abstract Operation parse(InputStream in) throws IOException;
-    public String label () {
-      return lbl;
-    }
+    public abstract Operation parse(
+      InputStream in) 
+        throws IOException;
     public byte code() {
       return code;
     }
-    public static Code get(byte b) {
-      try {
-        return values()[b];
+    public static Code get(byte opcode) {
+      try { 
+        return values()[opcode];
       } catch (Throwable t) {
         throw new IllegalArgumentException();
       }
@@ -86,21 +84,21 @@ public abstract class Operation
   }
 
   
-  protected final byte opcode;
+  protected final Code opcode;
   
   protected Operation(Code opcode) {
-    this.opcode = opcode.code;
+    this.opcode = opcode;
   }
   
-  public byte opcode() {
+  protected abstract void execute(Storage storage, HeaderGroup group);
+  @SuppressWarnings("rawtypes")
+  protected abstract void ephemeralExecute(
+      HeaderGroup group,
+      Set<Pair<String,ValueSupplier>> keys_to_turn_off,
+      HeaderSetter set);
+  
+  public Code code() {
     return opcode;
-  }
-  
-  @Override
-  public int compareTo(Operation o) {
-    if (opcode < o.opcode) return -1;
-    if (opcode > o.opcode) return 1;
-    return 0;
   }
   
   @Override
@@ -128,7 +126,7 @@ public abstract class Operation
     private final int index;
     private transient int hash = -1;
     public Toggl(int index) {
-      super(Code.STOGGL);
+      super(Code.TOGGL);
       this.index = index;
     }
     public void writeTo(OutputStream buf) throws IOException {
@@ -143,14 +141,6 @@ public abstract class Operation
     }
     public static Toggl parse(InputStream in) throws IOException {
       return new Toggl(uvarint2int(in));
-    }
-    @Override
-    public int compareTo(Operation o) {
-      int t = super.compareTo(o);
-      if (t!=0) return t;
-      Toggl other = (Toggl) o;
-      if (index > other.index) return 1;
-      return -1;
     }
     @Override
     public int hashCode() {
@@ -170,15 +160,37 @@ public abstract class Operation
       if (index != other.index)
         return false;
       return true;
+    }
+    @Override
+    protected void execute(
+      Storage storage, 
+      HeaderGroup group) {
+        group.toggle(index());
     }    
     
+    @Override
+    @SuppressWarnings("rawtypes")
+    protected void ephemeralExecute(
+      HeaderGroup group,
+      Set<Pair<String,ValueSupplier>> keys_to_turn_off,
+      HeaderSetter set) {
+      Pair<String,ValueSupplier> pair = 
+          group.storage().lookup(index());
+        if (pair == null)
+          throw new InvalidOperationException();
+      if (group.hasEntry(index())) {
+        keys_to_turn_off.add(pair);
+      } else {
+        set.set(pair.one(),pair.two());
+      }
+    }
   }
   
   public final static class Trang extends Operation {
     private final int s,e;
     private transient int hash = -1;
     public Trang(int s, int e) {
-      super(Code.STRANG);
+      super(Code.TRANG);
       this.s = s;
       this.e = e;
     }
@@ -201,20 +213,6 @@ public abstract class Operation
         uvarint2int(in),
         uvarint2int(in));
     }
-    private Range<Integer> asRange() {
-      return Range.closed(s,e);
-    }
-    @Override
-    public int compareTo(Operation o) {
-      int t = super.compareTo(o);
-      if (t!=0) return t;
-      Trang other = (Trang) o;
-      Range<Integer> r1 = asRange();
-      Range<Integer> r2 = other.asRange();
-      if (r1.lowerEndpoint() < r2.lowerEndpoint()) return -1;
-      if (r1.upperEndpoint() > r2.upperEndpoint()) return 1;
-      return -1;
-    }
     @Override
     public int hashCode() {
       if (hash == -1)
@@ -236,15 +234,40 @@ public abstract class Operation
         return false;
       return true;
     }
+    @Override
+    protected void execute(
+      Storage storage, 
+      HeaderGroup group) {
+      for (int n = start(); n <= end(); n++)
+        group.toggle(n);
+    }
+    @Override
+    @SuppressWarnings("rawtypes")
+    protected void ephemeralExecute(
+      HeaderGroup group,
+      Set<Pair<String,ValueSupplier>> keys_to_turn_off,
+      HeaderSetter set) {
+      for (int n = start(); n <= end(); n++) {
+        Pair<String,ValueSupplier> pair = 
+          group.storage().lookup(n);
+        if (pair == null)
+          throw new InvalidOperationException();
+        if (group.hasEntry(n)) {
+          keys_to_turn_off.add(pair);
+        } else {
+          set.set(pair.one(),pair.two());
+        }
+      }
+    }
     
   }
   
   public final static class Clone extends Operation {
     private final int index;
-    private final ValueProvider val;
+    private final ValueSupplier<?> val;
     private transient int hash = -1;
-    public Clone(int index, ValueProvider val) {
-      super(Code.SCLONE);
+    public Clone(int index, ValueSupplier<?> val) {
+      super(Code.CLONE);
       this.index = index;
       this.val = val;
     }
@@ -257,8 +280,9 @@ public abstract class Operation
     public int index() {
       return index;
     }
-    public ValueProvider val() {
-      return val;
+    @SuppressWarnings("unchecked")
+    public <V extends ValueSupplier<?>>V val() {
+      return (V)val;
     }
     public String toString() {
       return String.format("CLONE[%d,'%s']",index,val.toString());
@@ -268,17 +292,8 @@ public abstract class Operation
     }
     public static Clone parse(InputStream in) throws IOException {
       int index  = uvarint2int(in);
-      int flags = in.read(); // read the flags
+      byte flags = (byte)in.read(); // read the flags
       return new Clone(index, selectValueParser(flags).parse(in,flags));
-    }
-    @Override
-    public int compareTo(Operation o) {
-      int t = super.compareTo(o);
-      if (t!=0) return t;
-      Clone other = (Clone) o;
-      if (index < other.index) return -1;
-      if (index > other.index) return 1;
-      return -1;
     }
     @Override
     public int hashCode() {
@@ -304,15 +319,37 @@ public abstract class Operation
         return false;
       return true;
     }
+    @Override
+    protected void execute(
+      Storage storage, 
+      HeaderGroup group) {
+      String key = 
+        storage.lookupKey(index());
+      if (key == null)
+        throw new InvalidOperationException();
+      asKvsto(key).execute(storage, group);
+    }
+    @SuppressWarnings("rawtypes")
+    @Override
+    protected void ephemeralExecute(HeaderGroup group,
+      Set<Pair<String, ValueSupplier>> keys_to_turn_off, 
+      HeaderSetter set) {
+      String key = 
+        group.storage()
+          .lookupKey(index());
+      if (key == null)
+        throw new InvalidOperationException();
+      set.set(key, val());   
+    }
     
   }
   
   public final static class Kvsto extends Operation {
     private final String key;
-    private final ValueProvider val;
+    private final ValueSupplier<?> val;
     private transient int hash = -1;
-    public Kvsto(String key, ValueProvider val) {
-      super(Code.SKVSTO);
+    public Kvsto(String key, ValueSupplier<?> val) {
+      super(Code.KVSTO);
       this.key = key;
       this.val = val;
     }
@@ -329,8 +366,9 @@ public abstract class Operation
     public String key() {
       return key;
     }
-    public ValueProvider val() {
-      return val;
+    @SuppressWarnings("unchecked")
+    public <V extends ValueSupplier<?>>V val() {
+      return (V)val;
     }
     public String toString() {
       return String.format("KVSTO['%s','%s']",key,val.toString());
@@ -340,14 +378,8 @@ public abstract class Operation
       byte[] keydata = new byte[c];
       int r = in.read(keydata);
       String key = new String(keydata,0,r,"ISO-8859-1");
-      int flags = in.read(); // read in the flags
+      byte flags = (byte)in.read(); // read in the flags
       return new Kvsto(key,selectValueParser(flags).parse(in,flags));
-    }
-    @Override
-    public int compareTo(Operation o) {
-      int t = super.compareTo(o);
-      if (t!=0) return t;
-      return -1;
     }
     @Override
     public int hashCode() {
@@ -376,6 +408,20 @@ public abstract class Operation
         return false;
       return true;
     }
+    @Override
+    protected void execute(
+      Storage storage, 
+      HeaderGroup group) {
+      group.toggle(storage.store(key(), val()));
+    }
+    @SuppressWarnings("rawtypes")
+    @Override
+    protected void ephemeralExecute(
+      HeaderGroup group,
+      Set<Pair<String, ValueSupplier>> keys_to_turn_off, 
+      HeaderSetter set) {
+      set.set(key(), val());
+    }
     
   }
     
@@ -387,17 +433,16 @@ public abstract class Operation
     return new Trang(s,e);
   }
   
-  public static Operation makeClone(int index, ValueProvider val) {
+  public static Operation makeClone(int index, ValueSupplier<?> val) {
     return new Clone(index,val);
   }
   
-  public static Operation makeKvsto(String key, ValueProvider val) {
+  public static Operation makeKvsto(String key, ValueSupplier<?> val) {
     return new Kvsto(key, val);
   }
     
-  static final ValueParser<?> selectValueParser(int flags) {
-    int b = flags >>> 6;
-    switch(b) {
+  static final ValueParser<?> selectValueParser(byte flags) {
+    switch(flags & ~0xFC) {
     case 0x0: 
       return new StringValueParser();
     case 0x1:
@@ -410,4 +455,5 @@ public abstract class Operation
       throw new IllegalArgumentException("Invalid Flags...");
     }
   }
+  
 }

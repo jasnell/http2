@@ -14,31 +14,31 @@ import com.google.common.base.Objects;
  * use Immutable objects with Pair or ensure that the pair objects never
  * change state.
  */
-public class Pair<V1,V2> {
+public final class IntPair {
 
-  public static <V1,V2>Pair<V1,V2> of(V1 v1, V2 v2) {
-    return new Pair<V1,V2>(v1,v2);
+  public static IntPair of(int v1, int v2) {
+    return new IntPair(v1,v2);
   }
   
-  private final V1 v1;
-  private final V2 v2;
+  private final int v1;
+  private final int v2;
   private transient int hash = -1;
   
-  Pair(V1 v1, V2 v2) {
+  IntPair(int v1, int v2) {
     this.v1 = v1;
     this.v2 = v2;
     this.hash = hashCode();
   }
   
-  public Pair<V2,V1> swap() {
-    return Pair.of(v2,v1);
+  public IntPair swap() {
+    return IntPair.of(v2,v1);
   }
   
-  public V1 one() {
+  public int one() {
     return v1;
   }
   
-  public V2 two() {
+  public int two() {
     return v2;
   }
   
@@ -56,17 +56,15 @@ public class Pair<V1,V2> {
     return hash;
   }
 
-  @SuppressWarnings("unchecked")
   @Override
   public boolean equals(Object obj) {
     if (this == obj) return true;
     if (obj == null) return false;
     if (getClass() != obj.getClass()) 
       return false;
-    Pair<V1,V2> other = (Pair<V1,V2>) obj;
-    if (!Objects.equal(v1,other.v1) || 
-        !Objects.equal(v2,other.v2)) 
-      return false;
-    return true;
+    IntPair other = (IntPair) obj;
+    return 
+      v1 == other.v1 &&
+      v2 == other.v2; 
   }
 }
