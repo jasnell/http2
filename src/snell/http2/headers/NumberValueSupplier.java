@@ -108,7 +108,7 @@ public class NumberValueSupplier
   }
   
   public static class NumberValueParser 
-    implements ValueParser<NumberValueSupplier> {
+    extends ValueParser<NumberValueSupplier,NumberValueParser> {
     private static final UnsignedLong MAXUINT = 
       fromLongBits(0xFFFFFFFFL);
     @Override

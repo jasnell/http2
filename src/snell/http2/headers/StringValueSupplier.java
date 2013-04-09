@@ -6,11 +6,14 @@ import static com.google.common.collect.ImmutableList.copyOf;
 import static com.google.common.collect.Iterables.size;
 import static snell.http2.utils.IoUtils.int2uvarint;
 import static snell.http2.utils.IoUtils.readLengthPrefixedString;
+import static snell.http2.utils.IoUtils.readLengthPrefixedData;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+
+import snell.http2.headers.delta.Huffman;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Throwables;
@@ -20,6 +23,7 @@ public class StringValueSupplier
   extends ValueSupplier<Iterable<String>> {
 
   private final ImmutableList<String> strings;
+  private final Huffman huffman;
   private transient int length = 0;
   private transient int hash = 1;
   private final boolean utf8;
@@ -31,27 +35,28 @@ public class StringValueSupplier
   }
   
   public StringValueSupplier(
-    boolean huff, 
+    Huffman huffman, 
     boolean utf8, 
     String... strings) {
-    this(huff,utf8,copyOf(strings));
+    this(huffman,utf8,copyOf(strings));
   }
   
   public StringValueSupplier(
     Iterable<String> strings) {
-    this(false,true,strings);
+    this(null,true,strings);
   }
   
   public StringValueSupplier(
-    boolean huff, 
+    Huffman huffman, 
     boolean utf8, 
     Iterable<String> strings) {
-    super(determineFlags(huff,utf8));
+    super(determineFlags(huffman!=null,utf8));
     checkNotNull(strings);
     int size = size(strings);
     checkArgument(size > 0 && size <= 0xFF);
     this.utf8 = utf8;
-    this.huff = huff;
+    this.huff = huffman!=null;
+    this.huffman = huffman;
     this.strings = copyOf(strings);
   }
   
@@ -76,8 +81,18 @@ public class StringValueSupplier
     new ByteArrayOutputStream();
     buf.write(strings.size()-1);
     for (String string : strings) {
-      byte[] data = 
-        string.getBytes(utf8?"UTF-8":"ISO-5589-1");
+      byte[] data = null;
+      if (huffman != null) {
+        if (utf8)
+          throw new IllegalArgumentException(); // Cannot huffman encode utf8
+        ByteArrayOutputStream comp = 
+          new ByteArrayOutputStream();
+        huffman.encode(string, comp);
+        data = comp.toByteArray();
+      } else {
+        data = string.getBytes(
+          utf8?"UTF-8":"ISO-8859-1");
+      }
       buf.write(int2uvarint(data.length));
       buf.write(data);
     }
@@ -124,7 +139,7 @@ public class StringValueSupplier
 
 
   public static class StringValueParser 
-    implements ValueParser<StringValueSupplier> {
+    extends ValueParser<StringValueSupplier,StringValueParser> {
     @Override
     public StringValueSupplier parse(
       InputStream in, 
@@ -136,17 +151,29 @@ public class StringValueSupplier
       boolean utf8 = flag(flags,UTF8_TEXT);
       int c = in.read();
       while (c >= 0) {
-        // todo: handle huffman coding
-        strings.add(
-          readLengthPrefixedString(
-            in, 
-            utf8 ? 
-              "UTF-8" : 
-              "ISO8859-1"));
+        if (huff) {
+          if (huffman == null)
+            throw new IllegalStateException();
+          ByteArrayOutputStream comp =
+            new ByteArrayOutputStream();
+          byte[] data = 
+            readLengthPrefixedData(in);
+          huffman.decode(data, comp);
+          strings.add(
+            new String(
+              comp.toByteArray()));
+        } else {
+          strings.add(
+              readLengthPrefixedString(
+                in, 
+                utf8 ? 
+                  "UTF-8" : 
+                  "ISO8859-1")); 
+        }
         c--;
       }
       return new StringValueSupplier(
-        huff,
+        huff?huffman:null,
         utf8,
         strings.build());
     }
@@ -154,13 +181,19 @@ public class StringValueSupplier
   }
 
   public static StringValueSupplier create(
-    boolean huff, 
+    Huffman huff, 
     boolean utf8, 
     Iterable<String> strings) {
     return new StringValueSupplier(
       huff,
       utf8,
       strings);
+  }
+  
+  public static StringValueSupplier create(
+    boolean utf8, 
+    Iterable<String> strings) {
+      return create(null,utf8,strings);
   }
     
   public static StringValueSupplier create(
@@ -169,7 +202,13 @@ public class StringValueSupplier
   }
   
   public static StringValueSupplier create(
-    boolean huff, 
+    boolean utf8,
+    String... strings) {
+      return create(null,utf8,strings);
+  }
+  
+  public static StringValueSupplier create(
+    Huffman huff, 
     boolean utf8, 
     String... strings) {
     return new StringValueSupplier(

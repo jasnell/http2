@@ -8,9 +8,13 @@ import static com.google.common.collect.Sets.newHashSetWithExpectedSize;
 import java.util.List;
 import java.util.Set;
 
+import com.google.common.base.Throwables;
+
 import snell.http2.headers.ValueSupplier;
+import snell.http2.utils.CountingReference;
 import snell.http2.utils.IntPair;
 import snell.http2.utils.Pair;
+import snell.http2.utils.ReferenceCounter;
 
 
 @SuppressWarnings("rawtypes")
@@ -33,47 +37,62 @@ public class Storage {
   }
   
   private static final class Item {
-    final Pair<String,ValueSupplier> item;
+    final CountingReference<String> key;
+    final CountingReference<ValueSupplier> val;
     final int seq;
-    private transient int size = 0;
+    private transient int ksize = -1, vsize = -1;
+    private transient int hash = 1;
     Item(
-      String key, 
-      ValueSupplier val, int seq) {
-      this.item = Pair.of(key, val);
+      CountingReference<String> key, 
+      CountingReference<ValueSupplier> val, int seq) {
+      this.key = key;
+      this.val = val;
       this.seq = seq;
     }
     String key() {
-      return item.one();
+      return key != null ? key.get() : null;
     }
     ValueSupplier value() {
-      return item.two();
+      return val != null ? val.get() : null;
     }
-    Pair<String,ValueSupplier> item() {
-      return item;
+    Pair<String,ValueSupplier> asPair() {
+      return Pair.of(key(),value());
     }
     int seq() {
       return seq;
     }
-    public int size() {
-      if (size == 0) {
-        if (item.one() != null) {
-          try {
-            size += item.one().getBytes("ISO-8859-1").length;
-          } catch (Throwable t) {}
-        }
-        if (item.two() != null) {
-          size += item.two().length();
+    private int keyLen() {
+      if (ksize == -1) {
+        try {
+        ksize = key().getBytes("ISO-8859-1").length;
+        } catch (Throwable t) {
+          throw Throwables.propagate(t);
         }
       }
+      return ksize;
+    }
+    private int valLen() {
+      if (vsize == -1)
+        vsize = value().length();
+      return vsize;
+    }
+    public int size() {
+      int size = 0;
+      if (key != null && key.count() == 1) {
+        size += keyLen();
+      }
+      if (val != null && val.count() == 1)
+        size += valLen();
       return size;
     }
     @Override
     public int hashCode() {
-      final int prime = 31;
-      int result = 1;
-      result = prime * result + ((item == null) ? 0 : item.hashCode());
-      result = prime * result + seq;
-      return result;
+      if (hash == 1) {
+        hash = 31 * hash + ((key == null) ? 0 : key.hashCode());
+        hash = 31 * hash + ((val == null) ? 0 : val.hashCode());
+        hash = 31 * hash + seq;
+      }
+      return hash;
     }
     @Override
     public boolean equals(Object obj) {
@@ -84,15 +103,21 @@ public class Storage {
       if (getClass() != obj.getClass())
         return false;
       Item other = (Item) obj;
-      if (item == null) {
-        if (other.item != null)
+      if (key == null) {
+        if (other.key != null)
           return false;
-      } else if (!item.equals(other.item))
+      } else if (!key.equals(other.key))
         return false;
       if (seq != other.seq)
         return false;
+      if (val == null) {
+        if (other.val != null)
+          return false;
+      } else if (!val.equals(other.val))
+        return false;
       return true;
     }
+
 
   }
   
@@ -100,7 +125,10 @@ public class Storage {
   private final static int DEFAULT_MAX_SIZE = Integer.MAX_VALUE;
   
   private final Storage static_storage;
-  
+  private final ReferenceCounter<String> keyCounter = 
+    new ReferenceCounter<String>();
+  private final ReferenceCounter<ValueSupplier> valCounter = 
+    new ReferenceCounter<ValueSupplier>();
   private final List<Item> store;
   private final int offset, max, maxsize;
   private int first, current, current_size;
@@ -131,6 +159,10 @@ public class Storage {
     store = newArrayListWithExpectedSize(max);
   }
   
+  public int currentByteSize() {
+    return current_size;
+  }
+  
   public void addListener(PopListener listener) {
     listeners.add(listener);
   }
@@ -145,8 +177,21 @@ public class Storage {
     return store.size();
   }
   
+  private CountingReference<String> keyRef(String key) {
+    return keyCounter.acquire(key);
+  }
+  
+  private CountingReference<ValueSupplier> valRef(ValueSupplier val) {
+    return valCounter.acquire(val);
+  }
+  
+  private Item itemFor(String key, ValueSupplier val, int c) {
+    return new Item(keyRef(key),valRef(val),c);
+  }
+  
   public int store(String key, ValueSupplier val) {
-    Item item = new Item(key,val,current);
+    if (max == 0 || maxsize == 0) return -1;
+    Item item = itemFor(key,val,current);
     checkState(reserve(item));
     store.add(item);
     current_size += item.size();
@@ -175,7 +220,7 @@ public class Storage {
   
   public Pair<String,ValueSupplier> lookup(int idx) {
     Item item = lookupItem(idx);
-    return item != null ? item.item() : null;
+    return item != null ? item.asPair() : null;
   }
   
   private Item getItem(int idx) {
@@ -200,8 +245,12 @@ public class Storage {
   }
   
   protected boolean release(Item item) {
-    current_size -= item.size();
-    return true;
+    if (item != null) {
+      keyCounter.release(item.key());
+      valCounter.release(item.value());
+      current_size -= item.size();
+      return true;
+    } else return false;
   }
   
   protected boolean reserve(Item item) {

@@ -64,7 +64,7 @@ public class BinaryValueSupplier
   }
 
   public static class BinaryDataValueParser 
-    implements ValueParser<BinaryValueSupplier> {
+    extends ValueParser<BinaryValueSupplier,BinaryDataValueParser> {
     public BinaryValueSupplier parse(
       InputStream in, 
       byte flags) 

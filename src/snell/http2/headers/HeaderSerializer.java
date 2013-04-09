@@ -4,8 +4,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+import snell.http2.headers.delta.Huffman;
+
 public interface HeaderSerializer {
 
+  Huffman huffman();
+  
   void serialize(
     OutputStream buffer, 
     HeaderSet<?> map) 

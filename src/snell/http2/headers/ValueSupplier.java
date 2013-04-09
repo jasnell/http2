@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+import snell.http2.headers.delta.Huffman;
+
 import com.google.common.base.Supplier;
 
 public abstract class ValueSupplier<X>
@@ -34,14 +36,18 @@ public abstract class ValueSupplier<X>
     return flags;
   }
   
-  public static interface ValueParser<V extends ValueSupplier<?>> {
-    V parse(InputStream in, byte flags) throws IOException;
+  public static abstract class ValueParser<V extends ValueSupplier<?>,P extends ValueParser<V,P>> {
+    protected Huffman huffman;
+    public P useHuffman(Huffman huffman) {
+      this.huffman = huffman;
+      return (P)this;
+    }
+    public abstract V parse(InputStream in, byte flags) throws IOException;
   }
 
   @Override
   public int hashCode() {
     if (hash == 1) {
-      hash = super.hashCode();
       hash = 31 * hash + flags;
     }
     return hash;

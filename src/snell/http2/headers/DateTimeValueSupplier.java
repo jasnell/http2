@@ -35,7 +35,7 @@ public class DateTimeValueSupplier
   }
   
   public static class DateTimeValueParser 
-    implements ValueParser<DateTimeValueSupplier> {
+    extends ValueParser<DateTimeValueSupplier,DateTimeValueParser> {
     @Override
     public DateTimeValueSupplier parse(
       InputStream in, 

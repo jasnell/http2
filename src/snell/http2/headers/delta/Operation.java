@@ -24,43 +24,43 @@ public abstract class Operation {
 
   public static enum Code {
     TOGGL((byte)0x0) {
-      public Operation parse(InputStream in) throws IOException {
+      public Operation parse(InputStream in, Huffman huffman) throws IOException {
         return Toggl.parse(in);
       }
     },
     ETOGGL((byte)0x1) {
-      public Operation parse(InputStream in) throws IOException {
+      public Operation parse(InputStream in, Huffman huffman) throws IOException {
         return Toggl.parse(in);
       }
     },
     TRANG((byte)0x2) {
-      public Operation parse(InputStream in) throws IOException {
+      public Operation parse(InputStream in, Huffman huffman) throws IOException {
         return Trang.parse(in);
       }
     },
     ETRANG((byte)0x3) {
-      public Operation parse(InputStream in) throws IOException {
+      public Operation parse(InputStream in, Huffman huffman) throws IOException {
         return Trang.parse(in);
       }
     },
     KVSTO((byte)0x4) {
-      public Operation parse(InputStream in) throws IOException {
-        return Kvsto.parse(in);
+      public Operation parse(InputStream in, Huffman huffman) throws IOException {
+        return Kvsto.parse(in, huffman);
       }
     },
     EKVSTO((byte)0x5) {
-      public Operation parse(InputStream in) throws IOException {
-        return Kvsto.parse(in);
+      public Operation parse(InputStream in, Huffman huffman) throws IOException {
+        return Kvsto.parse(in, huffman);
       }
     },
     CLONE((byte)0x6) {
-      public Operation parse(InputStream in) throws IOException {
-        return Clone.parse(in);
+      public Operation parse(InputStream in, Huffman huffman) throws IOException {
+        return Clone.parse(in,huffman);
       }
     },
     ECLONE((byte)0x7) {
-      public Operation parse(InputStream in) throws IOException {
-        return Clone.parse(in);
+      public Operation parse(InputStream in, Huffman huffman) throws IOException {
+        return Clone.parse(in, huffman);
       }
     }
     ;
@@ -69,7 +69,8 @@ public abstract class Operation {
       this.code = code;
     }
     public abstract Operation parse(
-      InputStream in) 
+      InputStream in, 
+      Huffman huffman) 
         throws IOException;
     public byte code() {
       return code;
@@ -290,10 +291,14 @@ public abstract class Operation {
     public Kvsto asKvsto(String key) {
       return new Kvsto(key, val);
     }
-    public static Clone parse(InputStream in) throws IOException {
+    public static Clone parse(InputStream in, Huffman huffman) throws IOException {
       int index  = uvarint2int(in);
       byte flags = (byte)in.read(); // read the flags
-      return new Clone(index, selectValueParser(flags).parse(in,flags));
+      return new Clone(
+        index, 
+        selectValueParser(flags)
+          .useHuffman(huffman)
+          .parse(in,flags));
     }
     @Override
     public int hashCode() {
@@ -373,13 +378,17 @@ public abstract class Operation {
     public String toString() {
       return String.format("KVSTO['%s','%s']",key,val.toString());
     }
-    public static Kvsto parse(InputStream in) throws IOException {
+    public static Kvsto parse(InputStream in, Huffman huffman) throws IOException {
       int c = in.read(); // length of the key
       byte[] keydata = new byte[c];
       int r = in.read(keydata);
       String key = new String(keydata,0,r,"ISO-8859-1");
       byte flags = (byte)in.read(); // read in the flags
-      return new Kvsto(key,selectValueParser(flags).parse(in,flags));
+      return new Kvsto(
+        key,
+        selectValueParser(flags)
+          .useHuffman(huffman)
+          .parse(in,flags));
     }
     @Override
     public int hashCode() {
@@ -412,7 +421,9 @@ public abstract class Operation {
     protected void execute(
       Storage storage, 
       HeaderGroup group) {
-      group.toggle(storage.store(key(), val()));
+      int idx = storage.store(key(),val());
+      if (idx > 0)
+        group.toggle(idx);
     }
     @SuppressWarnings("rawtypes")
     @Override
@@ -441,7 +452,7 @@ public abstract class Operation {
     return new Kvsto(key, val);
   }
     
-  static final ValueParser<?> selectValueParser(byte flags) {
+  static final ValueParser<?,?> selectValueParser(byte flags) {
     switch(flags & ~0xFC) {
     case 0x0: 
       return new StringValueParser();

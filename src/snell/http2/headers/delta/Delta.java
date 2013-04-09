@@ -47,9 +47,11 @@ public final class Delta {
   private final Context resp_context = 
     new Context();
   private final byte group_id;
+  private final Huffman huffman;
   
-  public Delta(byte group_id) {
+  public Delta(byte group_id, Huffman huffman) {
     this.group_id = group_id;
+    this.huffman = huffman;
   }
   
   public String toString() {
@@ -61,9 +63,14 @@ public final class Delta {
   
   private static final Code[] EPHS = {ETOGGL,ETRANG,ECLONE};
   
+  public Huffman huffman() {
+    return huffman;
+  }
+  
   public void decodeFrom(
     InputStream in, 
-    HeaderSetter<?> set) throws IOException {
+    HeaderSetter<?> set,
+    Huffman huffman) throws IOException {
       // Read Group ID
       byte g_id = (byte) in.read();
       ImmutableMultimap.Builder<Code,Operation> ops = 
@@ -75,7 +82,7 @@ public final class Delta {
         while (header[1]-- >= 0)
           ops.put(
             code, 
-            code.parse(in));
+            code.parse(in,huffman));
       }
       HeaderGroup group = 
         resp_context

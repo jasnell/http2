@@ -9,8 +9,11 @@ import com.google.common.cache.CacheBuilder;
 public class Context {
 
   private Cache<Byte,HeaderGroup> groups = 
-    CacheBuilder.newBuilder().build();
-  
+    CacheBuilder
+      .newBuilder()
+      .maximumSize(0xFF)
+      .build();
+
   public HeaderGroup headerGroup(byte index) {
     return headerGroup(index,false);
   }

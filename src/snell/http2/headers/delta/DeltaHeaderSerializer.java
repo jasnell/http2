@@ -30,6 +30,11 @@ public class DeltaHeaderSerializer
     InputStream in, 
     HeaderSetter<?> set) 
       throws IOException {
-    delta.decodeFrom(in, set);
+    delta.decodeFrom(in, set, delta.huffman());
+  }
+
+  @Override
+  public Huffman huffman() {
+    return delta.huffman();
   }
 }
