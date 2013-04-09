@@ -12,6 +12,7 @@ import java.util.Iterator;
 
 import org.joda.time.DateTime;
 
+import snell.http2.frames.HeadersFrame.HeadersFrameBuilder;
 import snell.http2.headers.HeaderBlock;
 import snell.http2.headers.HeaderBlock.HeaderBlockBuilder;
 import snell.http2.headers.HeaderSerializer;
@@ -42,6 +43,15 @@ public final class PushPromiseFrame
       headers.serializer(ser);
     }
 
+    public PushPromiseFrameBuilder useUtf8Headers() {
+      return useUtf8Headers(true);
+    }
+    
+    public PushPromiseFrameBuilder useUtf8Headers(boolean on) {
+      headers.utf8(on);
+      return this;
+    }
+    
     @Override
     protected void parseRest(
       InputStream in) 

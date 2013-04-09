@@ -66,6 +66,15 @@ public final class HeadersFrame
       return new HeadersFrame(this);
     }
 
+    public HeadersFrameBuilder useUtf8Headers() {
+      return useUtf8Headers(true);
+    }
+    
+    public HeadersFrameBuilder useUtf8Headers(boolean on) {
+      headers.utf8(on);
+      return this;
+    }
+    
     public HeadersFrameBuilder priority(int p) {
       checkArgument(inRange(p,0,0x7FFFFFFF));
       checkState(this.type == TYPE1);

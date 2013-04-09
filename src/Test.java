@@ -33,11 +33,12 @@ public class Test {
 
     HeadersFrame frame = 
       HeadersFrame.make(ser)
+        .useUtf8Headers()
         .streamId(6)
         .set(":method", "get")
         .set(":path", "/")
         .set(":host", "example.org")
-        .set("user-agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.8; rv:16.0) Gecko/20100101 Firefox/16.0")
+        .set("user-agent", "M😄zilla/5.0 (Macintosh; Intel Mac OS X 10.8; rv:16.0) Gecko/20100101 Firefox/16.0")
         .get();
 
     frame.writeTo(out);
@@ -50,11 +51,12 @@ public class Test {
     
     frame = 
         HeadersFrame.make(ser)
+          .useUtf8Headers()
           .streamId(6)
           .set(":method", "get")
           .set(":path", "/foo")
           .set(":host", "example.org")
-          .set("user-agent", "This is the user agent")
+          .set("user-agent", "M😄zilla/5.0 (Macintosh; Intel Mac OS X 10.8; rv:16.0) Gecko/20100101 Firefox/16.0")
           .get();
 
       frame.writeTo(out);
