@@ -4,10 +4,13 @@ import static snell.http2.utils.IoUtils.int2uvarint;
 import static snell.http2.utils.IoUtils.uvarint2int;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Arrays;
+
+import com.google.common.base.Throwables;
 
 /**
  * Encodes a length-prefixed stream of binary octets.
@@ -84,6 +87,35 @@ public class BinaryValueSupplier
   @Override
   public int length() {
     return data.length;
+  }
+  
+  public static BinaryValueSupplier create(byte[] data, int s, int c)  {
+    try {
+      return create(new ByteArrayInputStream(data,s,c),c);
+    } catch (Throwable t) {
+      throw Throwables.propagate(t);
+    }
+  }
+  
+  public static BinaryValueSupplier create(byte[] data) {
+    try {
+      return create(data,0,data.length);
+    } catch (Throwable t) {
+      throw Throwables.propagate(t);
+    }
+  }
+  
+  public static BinaryValueSupplier create(InputStream in, int c) throws IOException {
+    ByteArrayOutputStream out = 
+      new ByteArrayOutputStream();
+    int m = Math.min(c, 1024);
+    byte[] buf = new byte[m];
+    int r = -1;
+    while((r = in.read(buf)) > -1 && c > 0) {
+      out.write(buf,0,r);
+      c -= r;
+    }
+    return new BinaryValueSupplier(out.toByteArray());
   }
 
 }

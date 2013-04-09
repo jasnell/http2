@@ -117,6 +117,24 @@ public final class HeadersFrame
       headers.set(key,val);
       return this;
     }
+
+    @Override
+    public HeadersFrameBuilder set(
+      String key, 
+      byte[] val) {
+      headers.set(key,val);
+      return this;
+    }
+
+    @Override
+    public HeadersFrameBuilder set(
+      String key, 
+      InputStream in, 
+      int c)
+        throws IOException {
+      headers.set(key, in, c);
+      return this;
+    }
     
   }
 

@@ -145,6 +145,14 @@ public abstract class Frame<F extends Frame<F>> {
       return (B)this;
     }
     
+    public B fin() {
+      return fin(true);
+    }
+    
+    public B fin(boolean on) {
+      return flag(FIN_FLAG,on);
+    }
+    
     protected boolean inRange(int v, int l, int h) {
       return v >= l && v <= h;
     }

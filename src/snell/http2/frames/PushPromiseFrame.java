@@ -12,7 +12,6 @@ import java.util.Iterator;
 
 import org.joda.time.DateTime;
 
-import snell.http2.frames.HeadersFrame.HeadersFrameBuilder;
 import snell.http2.headers.HeaderBlock;
 import snell.http2.headers.HeaderBlock.HeaderBlockBuilder;
 import snell.http2.headers.HeaderSerializer;
@@ -103,6 +102,24 @@ public final class PushPromiseFrame
       String key, 
       ValueSupplier... val) {
       headers.set(key,val);
+      return this;
+    }
+
+    @Override
+    public PushPromiseFrameBuilder set(
+      String key, 
+      byte[] val) {
+      headers.set(key,val);
+      return this;
+    }
+
+    @Override
+    public PushPromiseFrameBuilder set(
+      String key, 
+      InputStream in, 
+      int c)
+        throws IOException {
+      headers.set(key,in,c);
       return this;
     }
     

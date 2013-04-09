@@ -31,6 +31,14 @@ public final class RangedIntegerSupplier
     return new RangedIntegerSupplier(1,max|0x1,2);
   }
   
+  public static RangedIntegerSupplier createAllEvenIntegers() {
+    return createAllEvenIntegers(Integer.MAX_VALUE);
+  }
+  
+  public static RangedIntegerSupplier createAllOddIntegers() {
+    return createAllEvenIntegers(Integer.MAX_VALUE);
+  }
+  
   public static RangedIntegerSupplier createAllEvenIntegers(int max) {
     return new RangedIntegerSupplier(0,max & ~0x1,2);
   }

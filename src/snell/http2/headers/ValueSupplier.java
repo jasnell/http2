@@ -38,6 +38,7 @@ public abstract class ValueSupplier<X>
   
   public static abstract class ValueParser<V extends ValueSupplier<?>,P extends ValueParser<V,P>> {
     protected Huffman huffman;
+    @SuppressWarnings("unchecked")
     public P useHuffman(Huffman huffman) {
       this.huffman = huffman;
       return (P)this;

@@ -112,6 +112,15 @@ public interface HeaderSet<X extends HeaderSet<X>>
       return (B)this;
     }
 
+    @Override
+    public B set(String key, byte[] val) {
+      return set(key, BinaryValueSupplier.create(val));
+    }
+    
+    public B set(String key, InputStream in, int c) throws IOException {
+      return set(key, BinaryValueSupplier.create(in,c));
+    }
+    
   }
   
   boolean contains(String key, ValueSupplier val);
