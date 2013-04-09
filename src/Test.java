@@ -15,12 +15,14 @@ import snell.http2.headers.delta.Delta;
 import snell.http2.headers.delta.DeltaHeaderSerializer;
 import snell.http2.headers.delta.Huffman;
 import snell.http2.headers.delta.Storage;
+import snell.http2.utils.BitBucket;
 import snell.http2.utils.CountingReference;
 import snell.http2.utils.ReferenceCounter;
 
 public class Test {
 
   public static void main(String... args) throws Exception {
+    
     byte group_id = 0x0;
     Delta delta = new Delta(
       group_id, 

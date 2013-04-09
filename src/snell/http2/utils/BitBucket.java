@@ -1,8 +1,6 @@
 package snell.http2.utils;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.Arrays;
-
 
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
@@ -10,7 +8,7 @@ import com.google.common.primitives.Shorts;
 import static java.lang.Math.min;
 
 
-public class BitBucket {
+public final class BitBucket {
 
   private byte[] bucket;
   private int bsa_boff;
@@ -33,7 +31,7 @@ public class BitBucket {
   }
   
   public BitBucket() {
-    reset(200); // TODO: implement resizing
+    reset(128);
   }
   
   public boolean getBit() {
@@ -51,7 +49,6 @@ public class BitBucket {
   
   public byte[] getBits(int numbits) {
     int output_bytes = (numbits+7)/8;
-    int old_idx_boff = idx_boff;
     int pos = 0;
     byte[] output = new byte[output_bytes];
     if (numbits > num_bits) 
@@ -102,6 +99,10 @@ public class BitBucket {
     out.write(bucket,0,last_idx+1+(bsa_boff != 0?1:0));
   }
   
+  public void reset() {
+    reset(200);
+  }
+  
   private void reset(int cap) {
     bucket = new byte[cap]; // initial capacity
     bsa_boff = 0;
@@ -114,7 +115,7 @@ public class BitBucket {
   public BitBucket storeBit(boolean on) {
     ++num_bits;
     int byte_idx = ((num_bits + 7) / 8) - 1;
-    if (byte_idx > bucket.length)
+    if (byte_idx >= bucket.length)
       resize();
     bucket[byte_idx] |= (on?1:0) << (7-bsa_boff);
     ++bsa_boff;
@@ -217,7 +218,10 @@ public class BitBucket {
   }
   
   private void resize() {
-    // todo.. implement this
+    // there are likely more efficient scales we can use.. but this works for now
+    byte[] new_bucket = new byte[bucket.length + 8];
+    System.arraycopy(bucket, 0, new_bucket, 0, bucket.length);
+    this.bucket = new_bucket;
   }
   
 }
