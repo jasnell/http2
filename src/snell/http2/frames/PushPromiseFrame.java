@@ -33,13 +33,13 @@ public final class PushPromiseFrame
     FrameBuilder<PushPromiseFrame,PushPromiseFrameBuilder>
     implements HeaderSetter<PushPromiseFrameBuilder> {
 
-    private final HeaderBlockBuilder headers = 
-     HeaderBlock.make();
+    private final HeaderBlockBuilder headers;
     private int id;
     
-    protected PushPromiseFrameBuilder(HeaderSerializer ser) {
+    protected PushPromiseFrameBuilder(
+      HeaderSerializer ser) {
       super(TYPE);
-      headers.serializer(ser);
+      this.headers = HeaderBlock.make(ser);
     }
 
     public PushPromiseFrameBuilder useUtf8Headers() {

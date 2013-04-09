@@ -76,12 +76,16 @@ public final class Huffman {
   }
   
   private final ImmutableMap<Character,IntPair> table;
-  private final ImmutableSortedMap<IntPair,Character> decode;
   private final Node root = new Node();
   
   protected Huffman(HuffmanTableBuilder builder) {
     this.table = builder.table.build();
-    this.decode = builder.decode.build();
+    buildDecodeTable(builder);
+  }
+  
+  private void buildDecodeTable(HuffmanTableBuilder builder) {
+    ImmutableSortedMap<IntPair,Character> decode = 
+      builder.decode.build();
     for (Map.Entry<IntPair,Character> entry : decode.entrySet()) {
       Node node = root;
       BitBucket b = new BitBucket(entry.getKey().one());

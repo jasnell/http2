@@ -9,10 +9,12 @@ import static snell.http2.utils.IoUtils.unsignedBytes;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.math.BigInteger;
 import java.util.Arrays;
 
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
+import com.google.common.primitives.Shorts;
 import com.google.common.primitives.UnsignedInteger;
 import com.google.common.primitives.UnsignedLong;
 
@@ -30,6 +32,9 @@ public class NumberValueSupplier
     this.val = unsignedBytes(fromIntBits(val));
   }
   
+  /**
+   * For Date subclass...
+   */
   protected NumberValueSupplier(byte flags, long val) {
     super(flags);
     this.val = unsignedBytes(fromLongBits(val));
@@ -52,6 +57,60 @@ public class NumberValueSupplier
   
   public int size() {
     return val.length;
+  }
+  
+  @SuppressWarnings("unchecked")
+  public <N extends Number>N numVal() {
+    switch(val.length) {
+    case 0:
+      return null;
+    case 1:
+      return (N)Byte.valueOf(val[0]);
+    case 2:
+      return (N)Short.valueOf(Shorts.fromByteArray(val));
+    case 3:
+      return (N)Integer.valueOf(Ints.fromBytes((byte)0x0, val[0], val[1], val[2]));
+    case 4:
+      return (N)Integer.valueOf(Ints.fromByteArray(val));
+    case 5:
+      return (N)Long.valueOf(
+        Longs.fromBytes(
+          (byte)0x0, 
+          (byte)0x0, 
+          (byte)0x0, 
+          val[0], 
+          val[1], 
+          val[2], 
+          val[3], 
+          val[4]));
+    case 6:
+      return (N)Long.valueOf(
+          Longs.fromBytes(
+            (byte)0x0, 
+            (byte)0x0, 
+            val[0], 
+            val[1], 
+            val[2], 
+            val[3], 
+            val[4], 
+            val[5]));
+    case 7:
+    return (N)Long.valueOf(
+        Longs.fromBytes(
+          (byte)0x0, 
+          val[0], 
+          val[1], 
+          val[2], 
+          val[3], 
+          val[4], 
+          val[5], 
+          val[6]));
+    case 8:
+      return (N)Long.valueOf(
+        Longs.fromByteArray(val));
+    default:
+      return (N)new BigInteger(val);
+    }
   }
   
   public long longVal() {

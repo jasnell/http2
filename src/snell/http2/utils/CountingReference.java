@@ -10,26 +10,33 @@ import com.google.common.base.Supplier;
  * have zero effect. Any attempt to decrement the counter < 0 will
  * have zero effect.
  */
-public class CountingReference<V> 
+public final class CountingReference<V> 
   implements Supplier<V> {
     
+  public static <V>CountingReference<V> ref(V item) {
+    return new CountingReference<V>(item);
+  }
+  
   private transient final AtomicInteger c =
     new AtomicInteger(0);
   private transient int hash = 1;
   private final V val;
+  
   CountingReference(V val) {
     this.val = val;
   }
   public V get() {
     return val;
   }
-  void increment() {
+  CountingReference<V> increment() {
     if (c.get() < 0xFFFF)
       c.incrementAndGet();
+    return this;
   }
-  void decrement() {
+  CountingReference<V> decrement() {
     if (c.get() > 0)
       c.decrementAndGet();
+    return this;
   }
   public int count() {
     return c.get();

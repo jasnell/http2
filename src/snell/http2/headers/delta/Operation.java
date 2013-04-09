@@ -24,43 +24,71 @@ public abstract class Operation {
 
   public static enum Code {
     TOGGL((byte)0x0) {
-      public Operation parse(InputStream in, Huffman huffman) throws IOException {
+      public Operation parse(
+        InputStream in, 
+        Huffman huffman) 
+          throws IOException {
         return Toggl.parse(in);
       }
     },
     ETOGGL((byte)0x1) {
-      public Operation parse(InputStream in, Huffman huffman) throws IOException {
+      public Operation parse(
+        InputStream in, 
+        Huffman huffman) 
+          throws IOException {
         return Toggl.parse(in);
       }
     },
     TRANG((byte)0x2) {
-      public Operation parse(InputStream in, Huffman huffman) throws IOException {
+      public Operation parse(
+        InputStream in, 
+        Huffman huffman) 
+          throws IOException {
         return Trang.parse(in);
       }
     },
     ETRANG((byte)0x3) {
-      public Operation parse(InputStream in, Huffman huffman) throws IOException {
+      public Operation parse(
+        InputStream in, 
+        Huffman huffman) 
+          throws IOException {
         return Trang.parse(in);
       }
     },
     KVSTO((byte)0x4) {
-      public Operation parse(InputStream in, Huffman huffman) throws IOException {
-        return Kvsto.parse(in, huffman);
+      public Operation parse(
+        InputStream in, 
+        Huffman huffman) 
+          throws IOException {
+        return Kvsto.parse(
+          in, huffman);
       }
     },
     EKVSTO((byte)0x5) {
-      public Operation parse(InputStream in, Huffman huffman) throws IOException {
-        return Kvsto.parse(in, huffman);
+      public Operation parse(
+        InputStream in, 
+        Huffman huffman) 
+          throws IOException {
+        return Kvsto.parse(
+          in, huffman);
       }
     },
     CLONE((byte)0x6) {
-      public Operation parse(InputStream in, Huffman huffman) throws IOException {
-        return Clone.parse(in,huffman);
+      public Operation parse(
+        InputStream in, 
+        Huffman huffman) 
+          throws IOException {
+        return Clone.parse(
+          in,huffman);
       }
     },
     ECLONE((byte)0x7) {
-      public Operation parse(InputStream in, Huffman huffman) throws IOException {
-        return Clone.parse(in, huffman);
+      public Operation parse(
+        InputStream in, 
+        Huffman huffman) 
+          throws IOException {
+        return Clone.parse(
+          in, huffman);
       }
     }
     ;
@@ -91,14 +119,17 @@ public abstract class Operation {
     this.opcode = opcode;
   }
   
-  protected abstract void execute(Storage storage, HeaderGroup group);
+  protected abstract void execute(
+    Storage storage, 
+    HeaderGroup group);
+  
   @SuppressWarnings("rawtypes")
   protected abstract void ephemeralExecute(
-      HeaderGroup group,
-      Set<Pair<String,ValueSupplier>> keys_to_turn_off,
-      HeaderSetter set);
+    HeaderGroup group,
+    Set<Pair<String,ValueSupplier>> keys_to_turn_off,
+    HeaderSetter set);
   
-  public Code code() {
+  public final Code code() {
     return opcode;
   }
   
@@ -121,16 +152,21 @@ public abstract class Operation {
     return true;
   }
 
-  public void writeTo(OutputStream buf) throws IOException {}
+  public void writeTo(
+    OutputStream buf) 
+      throws IOException {}
   
-  public final static class Toggl extends Operation {
+  public final static class Toggl 
+    extends Operation {
     private final int index;
     private transient int hash = -1;
     public Toggl(int index) {
       super(Code.TOGGL);
       this.index = index;
     }
-    public void writeTo(OutputStream buf) throws IOException {
+    public void writeTo(
+      OutputStream buf) 
+        throws IOException {
       super.writeTo(buf);
       buf.write(int2uvarint(index));
     }
@@ -140,7 +176,9 @@ public abstract class Operation {
     public String toString() {
       return String.format("TOGGL[%d]",index);
     }
-    public static Toggl parse(InputStream in) throws IOException {
+    public static Toggl parse(
+      InputStream in) 
+        throws IOException {
       return new Toggl(uvarint2int(in));
     }
     @Override
@@ -187,7 +225,8 @@ public abstract class Operation {
     }
   }
   
-  public final static class Trang extends Operation {
+  public final static class Trang 
+    extends Operation {
     private final int s,e;
     private transient int hash = -1;
     public Trang(int s, int e) {
@@ -195,7 +234,9 @@ public abstract class Operation {
       this.s = s;
       this.e = e;
     }
-    public void writeTo(OutputStream buf) throws IOException {
+    public void writeTo(
+      OutputStream buf) 
+        throws IOException {
       super.writeTo(buf);
       buf.write(int2uvarint(s));
       buf.write(int2uvarint(e));
@@ -209,7 +250,9 @@ public abstract class Operation {
     public String toString() {
       return String.format("TRANG[%d,%d]",s,e);
     }
-    public static Trang parse(InputStream in) throws IOException {
+    public static Trang parse(
+      InputStream in) 
+        throws IOException {
       return new Trang(
         uvarint2int(in),
         uvarint2int(in));
@@ -263,7 +306,8 @@ public abstract class Operation {
     
   }
   
-  public final static class Clone extends Operation {
+  public final static class Clone 
+    extends Operation {
     private final int index;
     private final ValueSupplier<?> val;
     private transient int hash = -1;
@@ -272,7 +316,9 @@ public abstract class Operation {
       this.index = index;
       this.val = val;
     }
-    public void writeTo(OutputStream buf) throws IOException {
+    public void writeTo(
+      OutputStream buf) 
+        throws IOException {
       super.writeTo(buf);
       buf.write(int2uvarint(index));
       buf.write(val.flags());
@@ -291,7 +337,10 @@ public abstract class Operation {
     public Kvsto asKvsto(String key) {
       return new Kvsto(key, val);
     }
-    public static Clone parse(InputStream in, Huffman huffman) throws IOException {
+    public static Clone parse(
+      InputStream in, 
+      Huffman huffman) 
+        throws IOException {
       int index  = uvarint2int(in);
       byte flags = (byte)in.read(); // read the flags
       return new Clone(
@@ -336,7 +385,8 @@ public abstract class Operation {
     }
     @SuppressWarnings("rawtypes")
     @Override
-    protected void ephemeralExecute(HeaderGroup group,
+    protected void ephemeralExecute(
+      HeaderGroup group,
       Set<Pair<String, ValueSupplier>> keys_to_turn_off, 
       HeaderSetter set) {
       String key = 
@@ -349,7 +399,8 @@ public abstract class Operation {
     
   }
   
-  public final static class Kvsto extends Operation {
+  public final static class Kvsto 
+    extends Operation {
     private final String key;
     private final ValueSupplier<?> val;
     private transient int hash = -1;
@@ -358,7 +409,9 @@ public abstract class Operation {
       this.key = key;
       this.val = val;
     }
-    public void writeTo(OutputStream buf) throws IOException {
+    public void writeTo(
+      OutputStream buf) 
+        throws IOException {
       super.writeTo(buf);
       if (key.length() >= 256)
         throw new IllegalArgumentException();
@@ -378,7 +431,10 @@ public abstract class Operation {
     public String toString() {
       return String.format("KVSTO['%s','%s']",key,val.toString());
     }
-    public static Kvsto parse(InputStream in, Huffman huffman) throws IOException {
+    public static Kvsto parse(
+      InputStream in, 
+      Huffman huffman) 
+        throws IOException {
       int c = in.read(); // length of the key
       byte[] keydata = new byte[c];
       int r = in.read(keydata);
@@ -436,20 +492,27 @@ public abstract class Operation {
     
   }
     
-  public static Operation makeToggl(int index) {
-    return new Toggl(index);
+  public static Operation makeToggl(
+    int index) {
+      return new Toggl(index);
   }
   
-  public static Operation makeTrang(int s, int e) {
-    return new Trang(s,e);
+  public static Operation makeTrang(
+    int s, 
+    int e) {
+      return new Trang(s,e);
   }
   
-  public static Operation makeClone(int index, ValueSupplier<?> val) {
-    return new Clone(index,val);
+  public static Operation makeClone(
+    int index, 
+    ValueSupplier<?> val) {
+      return new Clone(index,val);
   }
   
-  public static Operation makeKvsto(String key, ValueSupplier<?> val) {
-    return new Kvsto(key, val);
+  public static Operation makeKvsto(
+    String key, 
+    ValueSupplier<?> val) {
+      return new Kvsto(key, val);
   }
     
   static final ValueParser<?,?> selectValueParser(byte flags) {

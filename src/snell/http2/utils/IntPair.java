@@ -31,7 +31,7 @@ public final class IntPair {
   }
   
   public IntPair swap() {
-    return IntPair.of(v2,v1);
+    return of(v2,v1);
   }
   
   public int one() {

@@ -48,10 +48,16 @@ public final class Delta {
     new Context();
   private final byte group_id;
   private final Huffman huffman;
+  private final DeltaHeaderSerializer ser;
   
   public Delta(byte group_id, Huffman huffman) {
     this.group_id = group_id;
     this.huffman = huffman;
+    this.ser = new DeltaHeaderSerializer(this);
+  }
+  
+  public DeltaHeaderSerializer ser() {
+    return ser;
   }
   
   public String toString() {

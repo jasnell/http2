@@ -25,9 +25,15 @@ public interface HeaderSet<X extends HeaderSet<X>>
 
     protected ImmutableMultimap.Builder<String,ValueSupplier> map = 
       ImmutableMultimap.builder();
-    protected HeaderSerializer ser;
+    protected final HeaderSerializer ser;
     protected boolean utf8;
     protected Huffman huffman;
+    
+    protected HeaderSetBuilder(HeaderSerializer ser) {
+      checkNotNull(ser);
+      this.ser = ser;
+      this.huffman = ser.huffman();
+    }
     
     public B parse(
       InputStream in) 
@@ -44,13 +50,7 @@ public interface HeaderSet<X extends HeaderSet<X>>
       this.utf8 = on;
       return (B)this;
     }
-    
-    public B serializer(HeaderSerializer ser) {
-      this.ser = ser;
-      this.huffman = ser.huffman();
-      return (B)this;
-    }
-    
+
     private static final Splitter splitter = 
       Splitter
         .on(';')

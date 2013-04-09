@@ -76,7 +76,6 @@ public class StringValueSupplier
   public void writeTo(
     OutputStream buffer) 
       throws IOException {
-    // Obviously we still need to huffman encode things... for now, just dump it
     ByteArrayOutputStream buf = 
     new ByteArrayOutputStream();
     buf.write(strings.size()-1);
@@ -84,7 +83,7 @@ public class StringValueSupplier
       byte[] data = null;
       if (huffman != null) {
         if (utf8)
-          throw new IllegalArgumentException(); // Cannot huffman encode utf8
+          throw new IllegalArgumentException(); // Cannot huffman encode utf8 right now
         ByteArrayOutputStream comp = 
           new ByteArrayOutputStream();
         huffman.encode(string, comp);

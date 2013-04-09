@@ -26,7 +26,7 @@ import com.google.common.primitives.Shorts;
 public abstract class Frame<F extends Frame<F>> {
 
   @SuppressWarnings({ "unchecked", "rawtypes" })
-  public static <F extends Frame>F parse(InputStream in, HeaderSerializer ser)
+  public static <F extends Frame<F>>F parse(InputStream in, HeaderSerializer ser)
     throws IOException {
     byte[] header = 
       new byte[4];

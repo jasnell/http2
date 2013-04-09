@@ -16,12 +16,15 @@ import com.google.common.collect.ImmutableMultimap;
 public final class HeaderBlock 
   implements HeaderSet<HeaderBlock> {
 
-  public static HeaderBlockBuilder make() {
-    return new HeaderBlockBuilder();
+  public static HeaderBlockBuilder make(HeaderSerializer ser) {
+    return new HeaderBlockBuilder(ser);
   }
   
   public static class HeaderBlockBuilder 
     extends HeaderSetBuilder<HeaderBlock,HeaderBlockBuilder> {
+    HeaderBlockBuilder(HeaderSerializer ser) {
+      super(ser);
+    }
     public HeaderBlock get() {
       return new HeaderBlock(this);
     }

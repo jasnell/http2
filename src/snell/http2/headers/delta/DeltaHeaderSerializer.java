@@ -8,7 +8,7 @@ import snell.http2.headers.HeaderSerializer;
 import snell.http2.headers.HeaderSet;
 import snell.http2.headers.HeaderSetter;
 
-public class DeltaHeaderSerializer
+public final class DeltaHeaderSerializer
   implements HeaderSerializer {
 
   public final Delta delta;

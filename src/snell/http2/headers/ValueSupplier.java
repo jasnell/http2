@@ -36,14 +36,18 @@ public abstract class ValueSupplier<X>
     return flags;
   }
   
-  public static abstract class ValueParser<V extends ValueSupplier<?>,P extends ValueParser<V,P>> {
+  public static abstract class ValueParser
+    <V extends ValueSupplier<?>,P extends ValueParser<V,P>> {
     protected Huffman huffman;
     @SuppressWarnings("unchecked")
     public P useHuffman(Huffman huffman) {
       this.huffman = huffman;
       return (P)this;
     }
-    public abstract V parse(InputStream in, byte flags) throws IOException;
+    public abstract V parse(
+      InputStream in, 
+      byte flags) 
+        throws IOException;
   }
 
   @Override

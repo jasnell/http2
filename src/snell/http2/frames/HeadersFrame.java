@@ -43,13 +43,14 @@ public final class HeadersFrame
     FrameBuilder<HeadersFrame,HeadersFrameBuilder>
     implements HeaderSetter<HeadersFrameBuilder> {
 
-    private final HeaderBlockBuilder headers = 
-     HeaderBlock.make();
+    private final HeaderBlockBuilder headers;
     private int priority = 0;
     
-    protected HeadersFrameBuilder(byte type, HeaderSerializer ser) {
+    protected HeadersFrameBuilder(
+      byte type, 
+      HeaderSerializer ser) {
       super(type);
-      headers.serializer(ser);
+      this.headers = HeaderBlock.make(ser);
     }
 
     @Override
