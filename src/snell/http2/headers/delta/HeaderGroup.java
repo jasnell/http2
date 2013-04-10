@@ -21,9 +21,21 @@ public final class HeaderGroup
   private Set<Integer> group = 
     new LinkedHashSet<Integer>();
   private final Storage storage;
+  private final byte id;
   
-  public HeaderGroup(Storage storage) {
+  public HeaderGroup(byte id) {
+    this(Storage.create(),id);
+  }
+  
+  public HeaderGroup(
+    Storage storage, 
+    byte id) {
     this.storage = storage;
+    this.id = id;
+  }
+  
+  public byte id() {
+    return id;
   }
   
   public Storage storage() {

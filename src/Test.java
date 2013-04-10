@@ -2,7 +2,6 @@ import static org.joda.time.DateTime.now;
 import static org.joda.time.DateTimeZone.UTC;
 import static snell.http2.utils.RangedIntegerSupplier.forAllEvenIntegers;
 import static snell.http2.frames.Frame.parse;
-import static snell.http2.headers.delta.Huffman.REQUEST_TABLE;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -15,20 +14,18 @@ import snell.http2.utils.RangedIntegerSupplier;
 public class Test {
 
   public static void main(String... args) throws Exception {
-    
+
     final RangedIntegerSupplier stream_ids = 
       forAllEvenIntegers();
-    final byte group_id = 0x0;
+
     final Delta delta = 
-      new Delta(
-        group_id, 
-        REQUEST_TABLE);
+      Delta.forRequest();
       
     ByteArrayOutputStream out = 
       new ByteArrayOutputStream();
 
     HeadersFrame.make(delta.ser())
-      .streamId(stream_ids.next())
+      .streamId(stream_ids)
       .set(":method", "get")
       .set(":path", "/")
       .set(":host", "example.org")
@@ -50,7 +47,7 @@ public class Test {
     
     HeadersFrame.make(delta.ser())
       .useUtf8Headers()                   // Enables extended characters in header strings, but disables huffman coding for this frame only
-      .streamId(stream_ids.next())
+      .streamId(stream_ids)
       .set(":method", "get")
       .set(":method", "put")              // Strings are multi-valued
       .set(":path", "/foo")

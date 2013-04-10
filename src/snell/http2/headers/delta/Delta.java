@@ -42,13 +42,31 @@ import com.google.common.collect.Range;
 @SuppressWarnings("rawtypes")
 public final class Delta {
 
-  private final Context context = 
-    new Context();
-  private final Context resp_context = 
-    new Context();
+  private final HeaderGroupContext context = 
+    new HeaderGroupContext();
+  private final HeaderGroupContext resp_context = 
+    new HeaderGroupContext();
   private final byte group_id;
   private final Huffman huffman;
   private final DeltaHeaderSerializer ser;
+  
+  public static Delta forRequest() {
+    return new Delta(Huffman.REQUEST_TABLE);
+  }
+  
+  public static Delta forRequest(byte group_id) {
+    return new Delta(group_id,Huffman.REQUEST_TABLE);
+  }
+  
+  public static Delta forResponse() {
+    return new Delta(Huffman.RESPONSE_TABLE);
+  }
+  
+  public Delta(Huffman huffman) {
+    this.group_id = context.get().id();
+    this.huffman = huffman;
+    this.ser = new DeltaHeaderSerializer(this);
+  }
   
   public Delta(byte group_id, Huffman huffman) {
     this.group_id = group_id;

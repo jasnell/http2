@@ -163,6 +163,10 @@ public abstract class Frame<F extends Frame<F>> {
       return (B)this;
     }
     
+    public B streamId(Supplier<Integer> s) {
+      return streamId(s.get());
+    }
+    
     protected B put(byte b) throws IOException {
       buffer.write(b);
       return (B)this;
