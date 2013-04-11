@@ -28,7 +28,6 @@ public final class MiscUtilities {
       try {
         return toDateTime(s);
       } catch (Throwable t) {
-        t.printStackTrace();
         return null;
       }
     }

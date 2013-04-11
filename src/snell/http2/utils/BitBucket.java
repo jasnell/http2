@@ -31,7 +31,7 @@ public final class BitBucket {
   }
   
   public BitBucket() {
-    reset(128);
+    reset(300);
   }
   
   public boolean getBit() {
@@ -125,6 +125,8 @@ public final class BitBucket {
 
   public BitBucket storeBit8(byte val) {
     num_bits += 8;
+    if (last_idx + 2 >= bucket.length)
+      resize();
     if (bsa_boff == 0) {
       bucket[last_idx++] = val;
     } else {
@@ -137,6 +139,8 @@ public final class BitBucket {
   
   public BitBucket storeBits(byte val, int count) {
     count = min(8,count);
+    if (last_idx + 2 >= bucket.length)
+      resize();
     val = (byte)(val & ~(0xFF >>> count));
     num_bits += count;
     if (bsa_boff == 0) {

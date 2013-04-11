@@ -33,12 +33,12 @@ public final class CompressionTest {
       "date",
       "last-modified",
       "if-modified-since",
-      "if-unmodified-since",
-      "expires");
+      "if-unmodified-since");
   
   private static final ImmutableSet<String> DATE_OR_NUM = 
     ImmutableSet.of(
-      "retry-after");
+      "retry-after",
+      "expires");
   
   public static void main(String... args) {
     try {
@@ -50,6 +50,8 @@ public final class CompressionTest {
         BufferedReader line_reader = readFully();
         String line = null;
         while((line = line_reader.readLine()) != null) {
+          if (line.trim().length() == 0)
+            break;
           if (delta == null) {
             String[] tokens = line.split("\\s",3);
             if (tokens[0].equalsIgnoreCase("HTTP")) {
@@ -65,25 +67,24 @@ public final class CompressionTest {
               blockBuilder,
               tokens,
               is_req);
-          }
-          if (line.trim().length() == 0)
-            break;
-          int i = line.indexOf(':', 1);
-          if (i > -1) {
-            String key = line.substring(0,i);
-            String val = line.substring(i+2).trim();
-            if (NUMS.contains(key)) {
-              set_num_val(blockBuilder,key,val);
-            } else if (DATES.contains(key)) {
-              set_date_val(blockBuilder,key,val);
-            } else if (DATE_OR_NUM.contains(key)) {
-              if (val.matches("\\d+")) {
+          } else {
+            int i = line.indexOf(':', 1);
+            if (i > -1) {
+              String key = line.substring(0,i);
+              String val = line.substring(i+2).trim();
+              if (NUMS.contains(key)) {
                 set_num_val(blockBuilder,key,val);
-              } else {
+              } else if (DATES.contains(key)) {
                 set_date_val(blockBuilder,key,val);
+              } else if (DATE_OR_NUM.contains(key)) {
+                if (val.matches("\\d+")) {
+                  set_num_val(blockBuilder,key,val);
+                } else {
+                  set_date_val(blockBuilder,key,val);
+                }
+              } else {
+                blockBuilder.set(key, val);
               }
-            } else {
-              blockBuilder.set(key, val);
             }
           }
         }
@@ -110,6 +111,9 @@ public final class CompressionTest {
       DateTime dt = httpDateToJodaTime.apply(val.trim());
       builder.set(key,dt);
     } catch (Throwable t) {
+      System.err.println(
+        String.format(
+          "Warning... %s has invalid date format %s", key, val));
       builder.set(key,val);
     }
   }
