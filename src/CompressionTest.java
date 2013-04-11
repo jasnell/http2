@@ -42,53 +42,61 @@ public final class CompressionTest {
   
   public static void main(String... args) {
     try {
-      Delta delta = null;
-      HeaderBlockBuilder blockBuilder = null;
-      boolean is_req = true;
-      BufferedReader line_reader = readFully();
-      String line = null;
-      while((line = line_reader.readLine()) != null) {
-        if (delta == null) {
-          String[] tokens = line.split("\\s",3);
-          if (tokens[0].equalsIgnoreCase("HTTP")) {
-            delta = res_delta;
-            is_req = false;
-          } else {
-            delta = req_delta;
-            is_req = true;
-          }
-          blockBuilder = 
-            HeaderBlock.make(delta.ser());
-          set_header_line(
-            blockBuilder,
-            tokens,
-            is_req);
-        }
-        if (line.trim().length() == 0)
-          break;
-        int i = line.indexOf(':', 1);
-        if (i > -1) {
-          String key = line.substring(0,i);
-          String val = line.substring(i+2).trim();
-          if (NUMS.contains(key)) {
-            set_num_val(blockBuilder,key,val);
-          } else if (DATES.contains(key)) {
-            set_date_val(blockBuilder,key,val);
-          } else if (DATE_OR_NUM.contains(key)) {
-            if (val.matches("\\d+")) {
-              set_num_val(blockBuilder,key,val);
+      int c = 2;
+      while(c > 0) {
+        Delta delta = null;
+        HeaderBlockBuilder blockBuilder = null;
+        boolean is_req = true;
+        BufferedReader line_reader = readFully();
+        String line = null;
+        while((line = line_reader.readLine()) != null) {
+          if (delta == null) {
+            String[] tokens = line.split("\\s",3);
+            if (tokens[0].equalsIgnoreCase("HTTP")) {
+              delta = res_delta;
+              is_req = false;
             } else {
-              set_date_val(blockBuilder,key,val);
+              delta = req_delta;
+              is_req = true;
             }
-          } else {
-            blockBuilder.set(key, val);
+            blockBuilder = 
+              HeaderBlock.make(delta.ser());
+            set_header_line(
+              blockBuilder,
+              tokens,
+              is_req);
           }
+          if (line.trim().length() == 0)
+            break;
+          int i = line.indexOf(':', 1);
+          if (i > -1) {
+            String key = line.substring(0,i);
+            String val = line.substring(i+2).trim();
+            if (NUMS.contains(key)) {
+              set_num_val(blockBuilder,key,val);
+            } else if (DATES.contains(key)) {
+              set_date_val(blockBuilder,key,val);
+            } else if (DATE_OR_NUM.contains(key)) {
+              if (val.matches("\\d+")) {
+                set_num_val(blockBuilder,key,val);
+              } else {
+                set_date_val(blockBuilder,key,val);
+              }
+            } else {
+              blockBuilder.set(key, val);
+            }
+          }
+        }
+        if (blockBuilder != null) {
+          blockBuilder
+            .get()
+            .writeTo(System.out);
+          System.out.println("\n");
+          c = 2;
+        } else {
+          c--;
         }
       }
-      if (blockBuilder != null)
-        blockBuilder
-          .get()
-          .writeTo(System.out);
     } catch (Throwable t) {
       throw propagate(t);
     }
