@@ -47,14 +47,14 @@ public final class CompressionTest {
         Delta delta = null;
         HeaderBlockBuilder blockBuilder = null;
         boolean is_req = true;
-        BufferedReader line_reader = readFully();
+        BufferedReader line_reader = reader();
         String line = null;
         while((line = line_reader.readLine()) != null) {
           if (line.trim().length() == 0)
             break;
           if (delta == null) {
             String[] tokens = line.split("\\s",3);
-            if (tokens[0].equalsIgnoreCase("HTTP")) {
+            if (tokens[0].startsWith("HTTP")) {
               delta = res_delta;
               is_req = false;
             } else {
@@ -147,7 +147,7 @@ public final class CompressionTest {
     }
   }
   
-  private static BufferedReader readFully() {
+  private static BufferedReader reader() {
     try {
       InputStreamReader reader = 
         new InputStreamReader(
