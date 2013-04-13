@@ -5,7 +5,6 @@ import static snell.http2.frames.Frame.parse;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.util.Arrays;
 
 import snell.http2.frames.HeadersFrame;
 import snell.http2.headers.delta.Delta;
@@ -34,15 +33,12 @@ public class Test {
       .fin()
       .get()
       .writeTo(out);
-
+    
     parse(
       new ByteArrayInputStream(
         out.toByteArray()), 
         delta.ser());
-    
-    System.out.println(Arrays.toString(out.toByteArray()));
-    System.out.println(out.toByteArray().length);
-    
+
     out = new ByteArrayOutputStream();
     
     HeadersFrame.make(delta.ser())
@@ -59,10 +55,6 @@ public class Test {
       .fin()
       .get()
       .writeTo(out);
-
-    System.out.println(
-      Arrays.toString(
-        out.toByteArray()));
 
     ByteArrayInputStream in = 
       new ByteArrayInputStream(

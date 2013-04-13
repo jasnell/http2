@@ -516,14 +516,14 @@ public abstract class Operation {
   }
     
   static final ValueParser<?,?> selectValueParser(byte flags) {
-    switch(flags & ~0xFC) {
+    switch((byte)(flags & ~0x3F)) {
     case 0x0: 
       return new StringValueParser();
-    case 0x1:
+    case 0x40:
       return new NumberValueParser();
-    case 0x2: 
+    case (byte)0x80: 
       return new DateTimeValueParser();
-    case 0x3:
+    case (byte)0xC0:
       return new BinaryDataValueParser();
     default:
       throw new IllegalArgumentException("Invalid Flags...");
