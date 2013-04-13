@@ -11,12 +11,21 @@ import com.google.common.base.Supplier;
 public abstract class ValueSupplier<X>
   implements Supplier<X> {
 
-  protected static final byte TEXT      = 0x0;
-  protected static final byte NUMBER    = 0x1;
-  protected static final byte DATE      = 0x2;
-  protected static final byte BINARY    = 0x3;
-  protected static final byte UTF8_TEXT = 0x4;
-  protected static final byte HUFF_TEXT = 0x8;
+  /**
+   * Flags are the 3 most significant bits of the 
+   * FLAGS+COUNT field in the header value...
+   * 
+   * The 5 least significant bits are reserved to
+   * indicate the number of distinct values 
+   * encoded in the header for header types that
+   * permit multiple values (currently only
+   * string headers).
+   */
+  protected static final byte TEXT      = (byte)0x00;
+  protected static final byte NUMBER    = (byte)0x40; //0x1;
+  protected static final byte DATE      = (byte)0x80; //0x2;
+  protected static final byte BINARY    = (byte)0xC0; //0x3;
+  protected static final byte UTF8_TEXT = (byte)0x20; //0x4;
   
   private final byte flags;
   private transient int hash = 1;

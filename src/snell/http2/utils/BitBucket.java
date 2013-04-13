@@ -96,7 +96,14 @@ public final class BitBucket {
   }
   
   public void writeTo(OutputStream out) throws IOException {
-    out.write(bucket,0,last_idx+1+(bsa_boff != 0?1:0));
+    out.write(bucket,0,last_idx+(bsa_boff != 0?1:0));
+  }
+  
+  public byte[] toByteArray() {
+    int l = last_idx+(bsa_boff != 0?1:0);
+    byte[] ret = new byte[l];
+    System.arraycopy(bucket, 0, ret, 0, l);
+    return ret;
   }
   
   public void reset() {

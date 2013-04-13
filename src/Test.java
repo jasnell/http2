@@ -14,7 +14,7 @@ import snell.http2.utils.RangedIntegerSupplier;
 public class Test {
 
   public static void main(String... args) throws Exception {
-
+    
     final RangedIntegerSupplier stream_ids = 
       forAllEvenIntegers();
 

@@ -30,6 +30,10 @@ public final class RangedIntegerSupplier
              Iterator<Integer>, 
              Iterable<Integer> {
   
+  public static RangedIntegerSupplier forAllIntegers() {
+    return new RangedIntegerSupplier(0,Integer.MAX_VALUE,1);
+  }
+  
   public static RangedIntegerSupplier forRange(int min, int max) {
     return new RangedIntegerSupplier(min,max,1);
   }

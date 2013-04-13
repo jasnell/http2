@@ -27,7 +27,6 @@ public class StringValueSupplier
   private transient int length = 0;
   private transient int hash = 1;
   private final boolean utf8;
-  private final boolean huff;
   
   public StringValueSupplier(
     String... strings) {
@@ -50,25 +49,28 @@ public class StringValueSupplier
     Huffman huffman, 
     boolean utf8, 
     Iterable<String> strings) {
-    super(determineFlags(huffman!=null,utf8));
+    super(determineFlags(utf8));
     checkNotNull(strings);
     int size = size(strings);
-    checkArgument(size > 0 && size <= 0xFF);
+    checkArgument(size > 0 && size <= 32);
     this.utf8 = utf8;
-    this.huff = huffman!=null;
     this.huffman = huffman;
     this.strings = copyOf(strings);
   }
   
   private static byte determineFlags(
-    boolean huff, 
     boolean utf8) {
       byte flags = TEXT;
-      if (huff) flags |= HUFF_TEXT;
       if (utf8) flags |= UTF8_TEXT;
       return flags;
   }
   
+  @Override
+  public byte flags() {
+    byte flags = super.flags();
+    return (byte)(flags | (byte)(strings.size() - 1));
+  }
+
   @Override
   /**
    * Format is: [num_items][item_len][item_data](...[item_len][item_data])
@@ -78,7 +80,6 @@ public class StringValueSupplier
       throws IOException {
     ByteArrayOutputStream buf = 
     new ByteArrayOutputStream();
-    buf.write(strings.size()-1);
     for (String string : strings) {
       byte[] data = null;
       if (huffman != null) {
@@ -108,7 +109,6 @@ public class StringValueSupplier
   public int hashCode() {
     if (hash == 1) {
       hash = super.hashCode();
-      hash = 31 * hash + (huff ? 1231 : 1237);
       hash = 31 * hash + (utf8 ? 1231 : 1237);
       hash = 31 * hash + ((strings == null) ? 0 : strings.hashCode());
     }
@@ -124,8 +124,6 @@ public class StringValueSupplier
     if (getClass() != obj.getClass())
       return false;
     StringValueSupplier other = (StringValueSupplier) obj;
-    if (huff != other.huff)
-      return false;
     if (strings == null) {
       if (other.strings != null)
         return false;
@@ -146,11 +144,10 @@ public class StringValueSupplier
         throws IOException {
       ImmutableList.Builder<String> strings = 
         ImmutableList.builder();
-      boolean huff = flag(flags,HUFF_TEXT);
       boolean utf8 = flag(flags,UTF8_TEXT);
-      int c = in.read();
+      int c = flags & ~0xE0;
       while (c >= 0) {
-        if (huff) {
+        if (!utf8) {
           if (huffman == null)
             throw new IllegalStateException();
           ByteArrayOutputStream comp =
@@ -172,7 +169,7 @@ public class StringValueSupplier
         c--;
       }
       return new StringValueSupplier(
-        huff?huffman:null,
+        huffman,
         utf8,
         strings.build());
     }
