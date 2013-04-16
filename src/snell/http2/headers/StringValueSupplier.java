@@ -89,6 +89,7 @@ public class StringValueSupplier
           new ByteArrayOutputStream();
         huffman.encode(string, comp);
         data = comp.toByteArray();
+
       } else {
         data = string.getBytes(
           utf8?

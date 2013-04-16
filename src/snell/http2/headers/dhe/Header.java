@@ -23,6 +23,7 @@ import snell.http2.utils.IoUtils;
 
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
+import com.google.common.collect.BoundType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.TreeRangeSet;
@@ -254,12 +255,6 @@ public abstract class Header<I extends Header.Instance>
   
   public static final class IndexBuilder 
     extends HeaderBuilder<IndexInstance,Index,IndexBuilder> {
-    public IndexBuilder set(int... idx) {
-      if (idx == null) return this;
-      for (int i : idx)
-        set((byte)i);
-      return this;
-    }
     public IndexBuilder set(byte... idx) {
       checkNotNull(idx);
       checkArgument(idx.length <= 32);
@@ -363,9 +358,13 @@ public abstract class Header<I extends Header.Instance>
       new Function<ImmutableSet<RangeInstance>,ImmutableSet<RangeInstance>>() {
         public ImmutableSet<RangeInstance> apply(ImmutableSet<RangeInstance> input) {
           TreeRangeSet<Byte> set = TreeRangeSet.create();
-          for (RangeInstance i : input)
-            set.add(com.google.common.collect.Range.open(
-              (byte)(i.start()-1),(byte)(i.end()+1)));
+          for (RangeInstance i : input) {
+            byte s = i.start();
+            boolean neg = (s & 0x80) == 0x80;
+            set.add(forRange(i.start(),i.end(),neg));
+//            set.add(com.google.common.collect.Range.open(
+//              (byte)(i.start()-1),(byte)(i.end()+1)));
+           }
           ImmutableSet.Builder<RangeInstance> b = 
             ImmutableSet.builder();
           for (com.google.common.collect.Range<Byte> r : set.asRanges()) {
@@ -377,6 +376,28 @@ public abstract class Header<I extends Header.Instance>
         }
     };
     
+  private static void set_ranges(
+    TreeRangeSet<Byte> set, 
+    ImmutableSet.Builder<Header<?>> ret) {
+    for (com.google.common.collect.Range<Byte> range : set.asRanges()) {
+      byte h = range.upperEndpoint();
+      byte l = range.lowerEndpoint();
+      if (h - l == 0) 
+        ret.add(
+          index()
+            .set(h)
+            .get());
+      else {
+        if (range.lowerBoundType() != BoundType.CLOSED) l++;
+        if (range.upperBoundType() != BoundType.CLOSED) h--;
+        ret.add(
+          range()
+            .range(l, h)
+            .get());
+      }
+    }
+  }
+    
   private static final
     Function<Iterable<IndexInstance>,Iterable<Header<?>>> INDEX_COALESCE = 
       new Function<Iterable<IndexInstance>,Iterable<Header<?>>>() {
@@ -386,35 +407,13 @@ public abstract class Header<I extends Header.Instance>
           TreeRangeSet<Byte> set2 = TreeRangeSet.create();
           for (IndexInstance i : input) {
             byte b = i.index();
-            if (b < 0) 
-              set2.add(
-                com.google.common.collect.Range.open(
-                  (byte)(b-1),
-                  (byte)(b+1)));
+            if (b < 0)
+              set2.add(forRange(b,b,true));
             else 
-              set.add(
-                com.google.common.collect.Range.open(
-                  (byte)(b-1),
-                  (byte)(b+1)));
+              set.add(forRange(b,b,false));
           }
-          for (com.google.common.collect.Range<Byte> range : set.asRanges()) {
-            byte h = range.upperEndpoint();
-            byte l = range.lowerEndpoint();
-            if (h - l == 0) 
-              ret.add(
-                index()
-                  .set(h)
-                  .get());
-            else {
-              ret.add(
-                range()
-                  .range(
-                    (byte)(l+1), 
-                    (byte)(h-1))
-                  .get());
-            }
-          }
-
+          set_ranges(set2,ret);
+          set_ranges(set,ret);
           return ret.build();
         }
   };
@@ -753,5 +752,37 @@ public abstract class Header<I extends Header.Instance>
     default:
       throw new IllegalArgumentException("Invalid Flags...");
     }
+  }
+  
+  private static com.google.common.collect.Range<Byte> forRange(byte s, byte e, boolean neg) {
+    BoundType sb = null, eb = null;
+    if (!neg) {
+      if (s == 0x00) {
+        sb = BoundType.CLOSED;
+      } else {
+        sb = BoundType.OPEN;
+        s--;
+      }
+      if (e == 0x7F) {
+        eb = BoundType.CLOSED;
+      } else {
+        eb = BoundType.OPEN;
+        e++;
+      }
+    } else {
+      if (s == 0x80) {
+        sb = BoundType.CLOSED;
+      } else {
+        sb = BoundType.OPEN;
+        s--;
+      }
+      if (e == 0xFF) {
+        sb = BoundType.CLOSED;
+      } else {
+        eb = BoundType.OPEN;
+        e++;
+      }
+    }
+    return com.google.common.collect.Range.range(s, sb, e, eb);
   }
 }
