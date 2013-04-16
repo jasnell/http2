@@ -99,6 +99,7 @@ public final class DheCompressionTest {
           c--;
         }
       }  
+      
     } catch (Throwable t) {
       throw propagate(t);
     }

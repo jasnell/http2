@@ -137,12 +137,15 @@ public abstract class Header<I extends Header.Instance>
       elementsEqual(instances, other.instances);
   }
 
-  public void writeTo(OutputStream out) throws IOException {
+  public void writeTo(
+    OutputStream out, 
+    Storage storage) 
+      throws IOException {
     byte prefix = (byte)(code() | instances.size()-1);
     if (eph) prefix |= FLAG_EPHEMERAL;
     out.write(prefix);
     for (Instance i : this)
-      i.writeTo(out);
+      i.writeTo(out,storage,eph);
   }
   
   public static IndexBuilder index() {
@@ -170,7 +173,11 @@ public abstract class Header<I extends Header.Instance>
   }
   
   public static interface Instance {
-    public void writeTo(OutputStream out) throws IOException;
+    public void writeTo(
+      OutputStream out, 
+      Storage storage,
+      boolean ephemeral) 
+        throws IOException;
   }
   
   public static abstract class HeaderBuilder
@@ -181,6 +188,10 @@ public abstract class Header<I extends Header.Instance>
       ImmutableSet.builder();
     private boolean eph = false;
     private int c = 0;
+    
+    public boolean isEphemeral() {
+      return eph;
+    }
     
     @SuppressWarnings("unchecked")
     public B ephemeral(boolean on) {
@@ -223,7 +234,9 @@ public abstract class Header<I extends Header.Instance>
     }
     @Override
     public void writeTo(
-      OutputStream out) 
+      OutputStream out,
+      Storage storage,
+      boolean ephemeral) 
         throws IOException {
       out.write(idx);
     }
@@ -296,7 +309,9 @@ public abstract class Header<I extends Header.Instance>
     }
     @Override
     public void writeTo(
-      OutputStream out)
+      OutputStream out,
+      Storage storage,
+      boolean ephemeral)
         throws IOException {
       out.write(start);
       out.write(end);
@@ -438,8 +453,14 @@ public abstract class Header<I extends Header.Instance>
     }
     @Override
     public void writeTo(
-      OutputStream out) 
+      OutputStream out,
+      Storage storage,
+      boolean ephemeral) 
         throws IOException {
+      if (!ephemeral) {
+        String name = storage.nameOf(index);
+        storage.push(name,value);
+      }
       out.write(index);
       out.write(value.flags());
       value.writeTo(out);
@@ -524,8 +545,14 @@ public abstract class Header<I extends Header.Instance>
     }
     @Override
     public void writeTo(
-      OutputStream out) 
+      OutputStream out,
+      Storage storage,
+      boolean ephemeral) 
         throws IOException {
+      if (!ephemeral)
+        storage.push(
+          name, 
+          value);
       writeLengthPrefixedString(out, name);
       out.write(value.flags());
       value.writeTo(out);
@@ -603,14 +630,16 @@ public abstract class Header<I extends Header.Instance>
     private CloneBuilder ephemeral_cloned;
     private LiteralBuilder literal;
     private LiteralBuilder ephemeral_literal;
+    private final Storage storage;
     
-    public BuilderContext() {
+    public BuilderContext(Storage storage) {
       reset(TYPE_INDEX,false);
       reset(TYPE_RANGE,false);
       reset(TYPE_CLONE,false);
       reset(TYPE_CLONE,true);
       reset(TYPE_LITERAL,false);
       reset(TYPE_LITERAL,true);
+      this.storage = storage;
     }
     
     public boolean index(
@@ -706,7 +735,7 @@ public abstract class Header<I extends Header.Instance>
         builder(code,ephemeral);
       if (b != null) {
         if (b.count() == 32) {
-          b.get().writeTo(out);
+          b.get().writeTo(out,storage);
           reset(code,ephemeral);
           return true;
         }
@@ -720,7 +749,7 @@ public abstract class Header<I extends Header.Instance>
       int c = 0;
       if (index.count() > 0)
         for (Header<?> h : index.get().coallesce()) {
-          h.writeTo(out);
+          h.writeTo(out,storage);
           c++;
         }
       ImmutableList<HeaderBuilder<?,?,?>> list = 
@@ -730,11 +759,13 @@ public abstract class Header<I extends Header.Instance>
           ephemeral_cloned,
           literal,
           ephemeral_literal);
-      for (HeaderBuilder<?,?,?> b : list)
+      for (HeaderBuilder<?,?,?> b : list) {
+        
         if (b.count() > 0) {
-          b.get().writeTo(out);
+          b.get().writeTo(out,storage);
           c++;
         } 
+      }
       return c;
     }
   }

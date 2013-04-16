@@ -231,4 +231,8 @@ public class Storage {
         stats_store_count, 
         stats_pop_count));
   }
+  
+  public String toString() {
+    return java.util.Arrays.toString(rack);
+  }
 }

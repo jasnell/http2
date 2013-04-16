@@ -1,20 +1,18 @@
 package snell.http2.headers.dhe;
 
 
-import static com.google.common.base.Preconditions.*;
-import static snell.http2.headers.dhe.Header.*;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
+import static snell.http2.headers.dhe.Header.TYPE_CLONE;
+import static snell.http2.headers.dhe.Header.TYPE_INDEX;
+import static snell.http2.headers.dhe.Header.TYPE_LITERAL;
+import static snell.http2.headers.dhe.Header.TYPE_RANGE;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.Map;
-
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.LinkedHashMultimap;
-import com.google.common.collect.Multimap;
-import com.google.common.io.ByteStreams;
 
 import snell.http2.headers.HeaderSerializer;
 import snell.http2.headers.HeaderSet;
@@ -22,6 +20,20 @@ import snell.http2.headers.HeaderSetter;
 import snell.http2.headers.ValueSupplier;
 import snell.http2.headers.delta.Huffman;
 import snell.http2.headers.dhe.Dhe.Mode;
+import snell.http2.headers.dhe.Header.BuilderContext;
+import snell.http2.headers.dhe.Header.Clone;
+import snell.http2.headers.dhe.Header.CloneInstance;
+import snell.http2.headers.dhe.Header.Index;
+import snell.http2.headers.dhe.Header.IndexInstance;
+import snell.http2.headers.dhe.Header.Literal;
+import snell.http2.headers.dhe.Header.LiteralInstance;
+import snell.http2.headers.dhe.Header.Range;
+import snell.http2.headers.dhe.Header.RangeInstance;
+
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.LinkedHashMultimap;
+import com.google.common.collect.Multimap;
+import com.google.common.io.ByteStreams;
 
 public final class DheHeaderSerializer 
   implements HeaderSerializer {
@@ -55,11 +67,11 @@ public final class DheHeaderSerializer
       ImmutableSet.of(
         //"referer", 
         //":path", 
-        //"authorization", 
-        //"www-authenticate",
-        //"proxy-authenticate",
-        //"date",
-        //"last-modified",
+        "authorization", 
+        "www-authenticate",
+        "proxy-authenticate",
+        "date"
+        //"last-modified"
         //"content-length",
         //"age"
         );
@@ -73,7 +85,7 @@ public final class DheHeaderSerializer
       new ByteArrayOutputStream();
     Storage storage = storage();
     BuilderContext ctx = 
-      new BuilderContext();
+      new BuilderContext(storage);
     Multimap<String,ValueSupplier<?>> store =
       LinkedHashMultimap.create();
     int c = 0;
@@ -99,9 +111,7 @@ public final class DheHeaderSerializer
             store.put(name, val);
         }
       }
-    }
-    for (Map.Entry<String, ValueSupplier<?>> entry : store.entries())
-      storage.push(entry.getKey(),entry.getValue());    
+    }  
     c += ctx.writeRemaining(rest_buf);
     buffer.write((byte)(c-1));
     ByteStreams.copy(
@@ -118,10 +128,7 @@ public final class DheHeaderSerializer
     Storage storage = storage();
     byte[] c = new byte[1];
     int r = in.read(c);
-    if (r < 0)
-      throw new IllegalStateException();
-    Multimap<String,ValueSupplier<?>> store = 
-      LinkedHashMultimap.create();
+    checkState(r >= 0);
     while(c[0] >= 0) {
       Header<?> header = 
         Header.parse(in,huffman);
@@ -157,7 +164,8 @@ public final class DheHeaderSerializer
               name, 
               value);
             if (!clone.ephemeral())
-              store.put(name, value);
+              storage.push(name, value);
+              //store.put(name, value);
           }
         }
         break;
@@ -168,7 +176,8 @@ public final class DheHeaderSerializer
           ValueSupplier<?> val = li.value();
           set.set(name,val);
           if (!literal.ephemeral())
-            store.put(name, val);
+            storage.push(name,val);
+            //store.put(name, val);
         }
         break;
       default:
@@ -176,8 +185,6 @@ public final class DheHeaderSerializer
       }
       c[0]--;
     }
-    for (Map.Entry<String, ValueSupplier<?>> entry : store.entries())
-      storage.push(entry.getKey(),entry.getValue());
   }
 
 }
