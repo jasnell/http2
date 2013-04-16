@@ -65,16 +65,9 @@ public final class DheHeaderSerializer
   private static final ImmutableSet<String> 
     ALWAYS_EPHEMERAL = 
       ImmutableSet.of(
-        //"referer", 
-        //":path", 
-        "authorization", 
-        "www-authenticate",
-        "proxy-authenticate",
-        "date"
-        //"last-modified"
-        //"content-length",
-        //"age"
-        );
+        "authorization",       // never store credentials in memory!
+        "proxy-authorization"
+      );
   
   @Override
   public void serialize(

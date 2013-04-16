@@ -36,7 +36,7 @@ public class DheTest {
         .fin();
       
       if (n == 1) {
-        b.set("user-agent", "foo"); // force a clone
+        b.set("user-agent", "foo");
         b.set("foo", 124);
         b.set("bar", 129);
       } else if (n == 2) {
