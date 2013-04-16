@@ -66,6 +66,8 @@ class StaticStorage
         "content-md5",
         "content-range",
         "content-type",
+        "content-disposition",
+        "content-language",
         "etag",
         "expect",
         "expires",
@@ -101,7 +103,12 @@ class StaticStorage
         "access-control-allow-origin",
         "content-disposition",
         "get-dictionary",
-        "p3p"
+        "p3p",
+        "link",
+        "prefer",
+        "preference-applied",
+        "accept-patch"
+        
     };
     for (String n : nulls)
       super.push(n, NULLVP);

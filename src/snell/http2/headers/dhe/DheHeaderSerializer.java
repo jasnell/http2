@@ -9,9 +9,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Map;
 
-import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.LinkedHashMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.io.ByteStreams;
 
@@ -74,7 +75,7 @@ public final class DheHeaderSerializer
     BuilderContext ctx = 
       new BuilderContext();
     Multimap<String,ValueSupplier<?>> store =
-      HashMultimap.create();
+      LinkedHashMultimap.create();
     int c = 0;
     for (String name : map) {
       name = name.toLowerCase();
@@ -99,9 +100,8 @@ public final class DheHeaderSerializer
         }
       }
     }
-    for (String name : store.keySet())
-      for (ValueSupplier<?> val : store.get(name))
-        storage.push(name,val);
+    for (Map.Entry<String, ValueSupplier<?>> entry : store.entries())
+      storage.push(entry.getKey(),entry.getValue());    
     c += ctx.writeRemaining(rest_buf);
     buffer.write((byte)(c-1));
     ByteStreams.copy(
@@ -121,7 +121,7 @@ public final class DheHeaderSerializer
     if (r < 0)
       throw new IllegalStateException();
     Multimap<String,ValueSupplier<?>> store = 
-      HashMultimap.create();
+      LinkedHashMultimap.create();
     while(c[0] >= 0) {
       Header<?> header = 
         Header.parse(in,huffman);
@@ -176,9 +176,8 @@ public final class DheHeaderSerializer
       }
       c[0]--;
     }
-    for (String name : store.keySet())
-      for (ValueSupplier<?> val : store.get(name))
-        storage.push(name,val);
+    for (Map.Entry<String, ValueSupplier<?>> entry : store.entries())
+      storage.push(entry.getKey(),entry.getValue());
   }
 
 }

@@ -362,15 +362,15 @@ public abstract class Header<I extends Header.Instance>
             byte s = i.start();
             boolean neg = (s & 0x80) == 0x80;
             set.add(forRange(i.start(),i.end(),neg));
-//            set.add(com.google.common.collect.Range.open(
-//              (byte)(i.start()-1),(byte)(i.end()+1)));
            }
           ImmutableSet.Builder<RangeInstance> b = 
             ImmutableSet.builder();
           for (com.google.common.collect.Range<Byte> r : set.asRanges()) {
-            b.add(new RangeInstance(
-              (byte)(r.lowerEndpoint()+1),
-              (byte)(r.upperEndpoint()-1)));
+            byte h = r.upperEndpoint();
+            byte l = r.lowerEndpoint();
+            if (r.lowerBoundType() != BoundType.CLOSED) l++;
+            if (r.upperBoundType() != BoundType.CLOSED) h--;
+            b.add(new RangeInstance(l,h));
           }
           return b.build();
         }

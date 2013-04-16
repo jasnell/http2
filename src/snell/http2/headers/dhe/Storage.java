@@ -23,6 +23,9 @@ public class Storage {
   private int length = 0;
   private final int maxlength;
   
+  private transient int stats_store_count = 0;
+  private transient int stats_pop_count = 0;
+  
   public Storage() {
     this(Integer.MAX_VALUE);
   }
@@ -46,6 +49,7 @@ public class Storage {
   public byte push(
     String name, 
     ValueSupplier<?> value) {
+      stats_store_count++;
       checkNotNull(name);
       checkNotNull(value);
       Item item = 
@@ -104,6 +108,7 @@ public class Storage {
   }
   
   private void pop() {
+    stats_pop_count++;
     Item item = rack[tail];
     if (item != null) {
       idx.delete(item.hashCode());
@@ -115,8 +120,12 @@ public class Storage {
       tail = 0;
   }
   
-  private int size() {
+  public int size() {
     return count;
+  }
+  
+  public int byteSize() {
+    return length;
   }
   
   public String nameOf(byte idx) {
@@ -211,5 +220,15 @@ public class Storage {
         .toString();
     }
   }
-  
+ 
+  public void printStats(String prefix) {
+    System.err.println(
+      String.format(
+        "%s - Count: %d, Bytes: %d, Puts: %d, Pops: %d", 
+        prefix,
+        count, 
+        length, 
+        stats_store_count, 
+        stats_pop_count));
+  }
 }
