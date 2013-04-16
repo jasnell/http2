@@ -22,10 +22,10 @@ public abstract class ValueSupplier<X>
    * string headers).
    */
   protected static final byte TEXT      = (byte)0x00;
-  protected static final byte NUMBER    = (byte)0x40; //0x1;
-  protected static final byte DATE      = (byte)0x80; //0x2;
-  protected static final byte BINARY    = (byte)0xC0; //0x3;
-  protected static final byte UTF8_TEXT = (byte)0x20; //0x4;
+  protected static final byte NUMBER    = (byte)0x40;
+  protected static final byte DATE      = (byte)0x80;
+  protected static final byte BINARY    = (byte)0xC0;
+  protected static final byte UTF8_TEXT = (byte)0x20;
   
   private final byte flags;
   private transient int hash = 1;
@@ -43,6 +43,10 @@ public abstract class ValueSupplier<X>
   
   public byte flags() {
     return flags;
+  }
+  
+  public byte count() {
+    return 1;
   }
   
   public static abstract class ValueParser

@@ -108,7 +108,7 @@ public final class IntMap {
     }
     int pos = size;
     if (pos >= keys.length)
-      growBy(growth_factor); //growBy(1);
+      growBy(growth_factor);
     keys[pos] = key;
     vals[pos] = value;
     size = pos + 1;

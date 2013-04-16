@@ -91,7 +91,9 @@ public class StringValueSupplier
         data = comp.toByteArray();
       } else {
         data = string.getBytes(
-          utf8?"UTF-8":"ISO-8859-1");
+          utf8?
+            "UTF-8":
+            "ISO-8859-1");
       }
       buf.write(int2uvarint(data.length));
       buf.write(data);
