@@ -119,7 +119,6 @@ public final class DheHeaderSerializer
       CommonPrefixStringValueSupplier cpv = 
         new CommonPrefixStringValueSupplier(
           huffman,
-          svs.utf8(),
           name,
           svs,storage());
       return cpv;

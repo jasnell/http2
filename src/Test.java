@@ -2,6 +2,8 @@
 import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
 
+import snell.http2.headers.Huffman;
+
 public class Test {
   
   public static void main(String... args) throws Exception {

@@ -16,6 +16,7 @@ import java.io.OutputStream;
 import com.google.common.base.Joiner;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 
 public class StringValueSupplier 
   extends ValueSupplier<Iterable<String>> {
@@ -24,7 +25,6 @@ public class StringValueSupplier
   private final Huffman huffman;
   private transient int length = 0;
   private transient int hash = 1;
-  private final boolean utf8;
   
   public StringValueSupplier(
     String... strings) {
@@ -33,38 +33,24 @@ public class StringValueSupplier
   
   public StringValueSupplier(
     Huffman huffman, 
-    boolean utf8, 
     String... strings) {
-    this(huffman,utf8,copyOf(strings));
+    this(huffman,copyOf(strings));
   }
   
   public StringValueSupplier(
     Iterable<String> strings) {
-    this(null,true,strings);
+    this(null,strings);
   }
   
   public StringValueSupplier(
-    Huffman huffman, 
-    boolean utf8, 
+    Huffman huffman,
     Iterable<String> strings) {
-    super(determineFlags(utf8));
+    super(TEXT);
     checkNotNull(strings);
     int size = size(strings);
     checkArgument(size > 0 && size <= 32);
-    this.utf8 = utf8;
     this.huffman = huffman;
     this.strings = copyOf(strings);
-  }
-  
-  public boolean utf8() {
-    return utf8;
-  }
-  
-  private static byte determineFlags(
-    boolean utf8) {
-      byte flags = TEXT;
-      if (utf8) flags |= UTF8_TEXT;
-      return flags;
   }
   
   @Override
@@ -89,13 +75,8 @@ public class StringValueSupplier
           new ByteArrayOutputStream();
         huffman.encode(string, comp);
         data = comp.toByteArray();
-
-      } else {
-        data = string.getBytes(
-          utf8?
-            "UTF-8":
-            "ISO-8859-1");
-      }
+      } else
+        data = string.getBytes("UTF-8");
       buf.write(int2uvarint(data.length));
       buf.write(data);
     }
@@ -110,11 +91,8 @@ public class StringValueSupplier
   
   @Override
   public int hashCode() {
-    if (hash == 1) {
-      hash = super.hashCode();
-      hash = 31 * hash + (utf8 ? 1231 : 1237);
-      hash = 31 * hash + ((strings == null) ? 0 : strings.hashCode());
-    }
+    if (hash == 1)
+      hash = 31 * super.hashCode() + ((strings == null) ? 0 : strings.hashCode());
     return hash;
   }
 
@@ -127,14 +105,7 @@ public class StringValueSupplier
     if (getClass() != obj.getClass())
       return false;
     StringValueSupplier other = (StringValueSupplier) obj;
-    if (strings == null) {
-      if (other.strings != null)
-        return false;
-    } else if (!strings.equals(other.strings))
-      return false;
-    if (utf8 != other.utf8)
-      return false;
-    return true;
+    return Iterables.elementsEqual(strings, other.strings);
   }
 
 
@@ -147,7 +118,6 @@ public class StringValueSupplier
         throws IOException {
       ImmutableList.Builder<String> strings = 
         ImmutableList.builder();
-      boolean utf8 = flag(flags,UTF8_TEXT);
       int c = flags & ~0xE0;
       while (c >= 0) {
         if (huffman == null)
@@ -157,22 +127,14 @@ public class StringValueSupplier
         byte[] data = 
           readLengthPrefixedData(in);
         huffman.decode(data, comp);
-        if (!utf8) {
-          strings.add(
-            new String(
-              comp.toByteArray(), 
-              "ISO-8859-1"));
-        } else {
-          strings.add(
-            new String(
-              comp.toByteArray(), 
-              "UTF-8")); 
-        }
+        strings.add(
+          new String(
+            comp.toByteArray(), 
+            "UTF-8")); 
         c--;
       }
       return new StringValueSupplier(
         huffman,
-        utf8,
         strings.build());
     }
     
@@ -180,11 +142,9 @@ public class StringValueSupplier
 
   public static StringValueSupplier create(
     Huffman huff, 
-    boolean utf8, 
     Iterable<String> strings) {
     return new StringValueSupplier(
       huff,
-      utf8,
       strings);
   }
   
@@ -194,24 +154,16 @@ public class StringValueSupplier
   }
   
   public static StringValueSupplier create(
-    boolean utf8,
     String... strings) {
-      return create(null,utf8,strings);
+      return create(null,strings);
   }
   
   public static StringValueSupplier create(
     Huffman huff, 
-    boolean utf8, 
     String... strings) {
     return new StringValueSupplier(
       huff,
-      utf8,
       strings);
-  }
-  
-  public static StringValueSupplier create(
-    String...strings) {
-    return new StringValueSupplier(strings);
   }
 
   @Override
@@ -233,7 +185,7 @@ public class StringValueSupplier
 
   private int length(String s) {
     try {
-      byte[] m = s.getBytes(utf8?"UTF-8":"ISO-8859-1");
+      byte[] m = s.getBytes("UTF-8");
       return m.length;
     } catch (Throwable t) {
       throw Throwables.propagate(t);

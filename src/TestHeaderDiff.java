@@ -22,7 +22,6 @@ public class TestHeaderDiff {
       HeaderBlock headers = 
         HeaderBlock
           .make(hd.ser())
-          .utf8()
           .set("A", "B;" + n)
           .set("B", "A;" + n)
           .get();

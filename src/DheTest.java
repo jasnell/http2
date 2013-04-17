@@ -27,7 +27,6 @@ public class DheTest {
   
       HeadersFrameBuilder b =
         HeadersFrame.make(dhe.ser())
-        .useUtf8Headers()
         .streamId(stream_ids)
         .set(":method", "get")
         .set(":path", "/")

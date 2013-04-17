@@ -24,7 +24,8 @@ public abstract class ValueSupplier<X>
   protected static final byte NUMBER    = (byte)0x40;
   protected static final byte DATE      = (byte)0x80;
   protected static final byte BINARY    = (byte)0xC0;
-  protected static final byte UTF8_TEXT = (byte)0x20;
+  
+  protected static final byte FLAG_RESERVED = (byte)0x20;
   
   private final byte flags;
   private transient int hash = 1;

@@ -25,7 +25,6 @@ public interface HeaderSet<X extends HeaderSet<X>>
     protected ImmutableMultimap.Builder<String,ValueSupplier> map = 
       ImmutableMultimap.builder();
     protected final HeaderSerializer ser;
-    protected boolean utf8;
     protected Huffman huffman;
     
     protected HeaderSetBuilder(HeaderSerializer ser) {
@@ -41,15 +40,6 @@ public interface HeaderSet<X extends HeaderSet<X>>
       return (B)this;
     }
     
-    public B utf8() {
-      return utf8(true);
-    }
-    
-    public B utf8(boolean on) {
-      this.utf8 = on;
-      return (B)this;
-    }
-
     private static final Splitter splitter = 
       Splitter
         .on(';')
@@ -62,11 +52,11 @@ public interface HeaderSet<X extends HeaderSet<X>>
     }
         
     private StringValueSupplier c(String v) {
-      return create(huffman,utf8,v);
+      return create(huffman,v);
     }
     
     private StringValueSupplier c(String... v) {
-      return create(huffman,utf8,v);
+      return create(huffman,v);
     }
     
     @Override

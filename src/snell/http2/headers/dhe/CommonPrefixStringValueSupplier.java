@@ -26,31 +26,26 @@ public class CommonPrefixStringValueSupplier
   extends ValueSupplier<Iterable<String>> {
 
   private final ImmutableList<PrefixedString> list;
-  private final boolean utf8; 
   private final Huffman huffman;
   private transient int length = 0;
   private transient int hash = 1;
   
   private CommonPrefixStringValueSupplier(
     Huffman huffman, 
-    boolean utf8,
     String name,
     ImmutableList<PrefixedString> list, 
     Storage storage) {
-    super((byte)(TEXT | UTF8_TEXT));
-    this.utf8 = utf8;
+    super(TEXT);
     this.huffman = huffman;
     this.list = list;
   }  
   
   public CommonPrefixStringValueSupplier(
     Huffman huffman, 
-    boolean utf8,
     String name,
     StringValueSupplier source, 
     Storage storage) {
-    super((byte)(TEXT | UTF8_TEXT));
-    this.utf8 = utf8;
+    super(TEXT);
     this.huffman = huffman;
     this.list = prep(name,source,storage);
   }
@@ -73,7 +68,7 @@ public class CommonPrefixStringValueSupplier
 
   public StringValueSupplier toStringValueSupplier() {
     return StringValueSupplier
-      .create(huffman, utf8, get());
+      .create(huffman, get());
   }
   
   @Override
@@ -101,7 +96,7 @@ public class CommonPrefixStringValueSupplier
 
   private int length(String s) {
     try {
-      byte[] m = s.getBytes(utf8?"UTF-8":"ISO-8859-1");
+      byte[] m = s.getBytes("ISO-8859-1");
       return m.length;
     } catch (Throwable t) {
       throw Throwables.propagate(t);
@@ -119,8 +114,7 @@ public class CommonPrefixStringValueSupplier
   public int hashCode() {
     if (hash == 1) {
       hash = 31 * hash + ((huffman == null) ? 0 : huffman.hashCode());
-      hash = 31 * hash + ((list == null) ? 0 : list.hashCode());
-      hash = 31 * hash + (utf8 ? 1231 : 1237);      
+      hash = 31 * hash + ((list == null) ? 0 : list.hashCode());     
     }
     return hash;
   }
@@ -136,7 +130,6 @@ public class CommonPrefixStringValueSupplier
     CommonPrefixStringValueSupplier other = 
       (CommonPrefixStringValueSupplier) obj;
     return Objects.equal(huffman,other.huffman) &&
-      utf8 != other.utf8 &&
       Iterables.elementsEqual(list, other.list);
   }
 
@@ -162,12 +155,8 @@ public class CommonPrefixStringValueSupplier
         huffman.encode(string, comp);
         data = comp.toByteArray();
 
-      } else {
-        data = string.getBytes(
-          utf8?
-            "UTF-8":
-            "ISO-8859-1");
-      }
+      } else
+        data = string.getBytes("UTF-8");
       buf.write(int2uvarint(data.length));
       buf.write(data);
     }
@@ -270,7 +259,6 @@ public class CommonPrefixStringValueSupplier
       checkNotNull(name);
       ImmutableList.Builder<PrefixedString> strings = 
         ImmutableList.builder();
-      boolean utf8 = flag(flags,UTF8_TEXT);
       int c = flags & ~0xE0;
       while (c >= 0) {
         if (huffman == null)
@@ -292,13 +280,9 @@ public class CommonPrefixStringValueSupplier
         huffman.decode(data, comp);
         
         String suffix = 
-          !utf8 ?
-            new String(
-              comp.toByteArray(), 
-              "ISO-8859-1") :
-            new String(
-              comp.toByteArray(), 
-              "UTF-8"); 
+          new String(
+            comp.toByteArray(), 
+            "UTF-8"); 
               
         String value = 
           prefix_length > 0 ?
@@ -321,7 +305,6 @@ public class CommonPrefixStringValueSupplier
       }
       return new CommonPrefixStringValueSupplier(
         huffman,
-        utf8,
         name,
         strings.build(),
         storage);
