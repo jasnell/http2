@@ -59,7 +59,7 @@ public final class BitBucket {
       idx_byte += numbits / 8;
       idx_boff = numbits % 8;
       if (idx_boff > 0)
-        output[output_bytes-1] &= ~(0xFF >> idx_boff);
+        output[output_bytes-1] &= ~(0xFF >>> idx_boff);
     } else {
       int idx_leftover = 8 - idx_boff;
       while(bits_left >= 8) {
@@ -74,8 +74,10 @@ public final class BitBucket {
         byte cur_byte = 0;
         while(true) {
           int bits_to_consume = min(min(8-cur_boff,idx_leftover), bits_left);
-          int mask = ~(0xff >> bits_to_consume);
-          cur_byte |= ((bucket[idx_byte] << idx_boff) & mask) >> cur_boff;
+          byte mask = (byte)(0xff >>> bits_to_consume);
+          // java's bit twiddling sucks :-(
+          byte adj = (byte)(((byte)((byte)(bucket[idx_byte] << idx_boff) & ~mask) & ~0xFF00) >>> cur_boff);
+          cur_byte |= adj;
           bits_left -= bits_to_consume;
           idx_boff += bits_to_consume;
           if (idx_boff >= 8) {
