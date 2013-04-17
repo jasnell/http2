@@ -18,6 +18,7 @@ import snell.http2.headers.HeaderSerializer;
 import snell.http2.headers.HeaderSet;
 import snell.http2.headers.HeaderSetter;
 import snell.http2.headers.Huffman;
+import snell.http2.headers.StringValueSupplier;
 import snell.http2.headers.ValueSupplier;
 import snell.http2.headers.dhe.Dhe.Mode;
 import snell.http2.headers.dhe.Header.BuilderContext;
@@ -38,6 +39,8 @@ public final class DheHeaderSerializer
   
   private final Dhe dhe;
   private final Huffman huffman;
+  
+  public static final boolean DO_COMMON_PREFIX = false;
   
   public DheHeaderSerializer(Dhe dhe) {
     this.dhe = dhe;
@@ -63,8 +66,8 @@ public final class DheHeaderSerializer
   private static final ImmutableSet<String> 
     ALWAYS_EPHEMERAL = 
       ImmutableSet.of(
-        "authorization",       // never store credentials in memory!
-        "proxy-authorization"
+        //"authorization",       // never store credentials in memory!
+        //"proxy-authorization"
       );
   
   @Override
@@ -81,6 +84,7 @@ public final class DheHeaderSerializer
     for (String name : map) {
       name = name.toLowerCase();
       for (ValueSupplier<?> val : map.get(name)) {
+        val = commonPrefixSupplier(name,val);
         boolean ephemeral = 
           ALWAYS_EPHEMERAL.contains(name);
         try {
@@ -106,7 +110,29 @@ public final class DheHeaderSerializer
         rest_buf.toByteArray()), 
         buffer);
   }
-
+  
+  private ValueSupplier<?> commonPrefixSupplier(
+    String name, 
+    ValueSupplier<?> val) {
+    if (DO_COMMON_PREFIX && val instanceof StringValueSupplier) {
+      StringValueSupplier svs = val.cast();
+      CommonPrefixStringValueSupplier cpv = 
+        new CommonPrefixStringValueSupplier(
+          huffman,
+          svs.utf8(),
+          name,
+          svs,storage());
+      return cpv;
+    } else return val;
+  }
+  
+  private ValueSupplier<?> stringSupplier(ValueSupplier<?> val) {
+    if (DO_COMMON_PREFIX && val instanceof CommonPrefixStringValueSupplier) {
+      CommonPrefixStringValueSupplier cvs = val.cast();
+      return cvs.toStringValueSupplier();
+    } else return val;
+  }
+  
   @Override
   public void deserialize(
     InputStream in, 
@@ -118,7 +144,7 @@ public final class DheHeaderSerializer
     checkState(r >= 0);
     while(c[0] >= 0) {
       Header<?> header = 
-        Header.parse(in,huffman);
+        Header.parse(in,huffman,storage);
       switch(header.code()) {
       case TYPE_INDEX:
         Index index = header.cast();
@@ -126,7 +152,7 @@ public final class DheHeaderSerializer
           byte idx = ii.index();
           set.set(
             checkNotNull(storage.nameOf(idx)), 
-            storage.valueOf(idx));
+            stringSupplier(storage.valueOf(idx)));
         }
         break;
       case TYPE_RANGE:
@@ -137,7 +163,7 @@ public final class DheHeaderSerializer
           for (byte idx = start; idx <= end; idx++)
             set.set(
               checkNotNull(storage.nameOf(idx)),
-              storage.valueOf(idx));
+              stringSupplier(storage.valueOf(idx)));
         }
         break;
       case TYPE_CLONE:
@@ -149,7 +175,7 @@ public final class DheHeaderSerializer
           if (name != null) {
             set.set(
               name, 
-              value);
+              stringSupplier(value));
             if (!clone.ephemeral())
               storage.push(name, value);
           }
@@ -160,7 +186,7 @@ public final class DheHeaderSerializer
         for (LiteralInstance li : literal) {
           String name = li.name();
           ValueSupplier<?> val = li.value();
-          set.set(name,val);
+          set.set(name,stringSupplier(val));
           if (!literal.ephemeral())
             storage.push(name,val);
         }

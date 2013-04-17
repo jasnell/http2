@@ -56,6 +56,10 @@ public class StringValueSupplier
     this.strings = copyOf(strings);
   }
   
+  public boolean utf8() {
+    return utf8;
+  }
+  
   private static byte determineFlags(
     boolean utf8) {
       byte flags = TEXT;
@@ -81,8 +85,6 @@ public class StringValueSupplier
     for (String string : strings) {
       byte[] data = null;
       if (huffman != null) {
-//        if (utf8)
-//          throw new IllegalArgumentException(); // Cannot huffman encode utf8 right now
         ByteArrayOutputStream comp = 
           new ByteArrayOutputStream();
         huffman.encode(string, comp);
@@ -215,6 +217,10 @@ public class StringValueSupplier
   @Override
   public Iterable<String> get() {
     return strings;
+  }
+  
+  public String get(int idx) {
+    return strings.get(idx);
   }
 
   @Override

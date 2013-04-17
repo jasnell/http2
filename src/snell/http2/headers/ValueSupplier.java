@@ -48,6 +48,11 @@ public abstract class ValueSupplier<X>
     return 1;
   }
   
+  @SuppressWarnings("unchecked")
+  public <V extends ValueSupplier<?>>V cast() {
+    return (V)this;
+  }
+  
   public static abstract class ValueParser
     <V extends ValueSupplier<?>,P extends ValueParser<V,P>> {
     protected Huffman huffman;

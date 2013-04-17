@@ -33,7 +33,7 @@ public class DheTest {
         .set(":path", "/")
         .set(":host", "example.org")
         .set("foo", 123)
-        .set("user-agent", "ŠMozilla/5.0 (Macintosh; Intel Mac OS X 10.8; rv:16.0) Gecko/20100101 Firefox/16.0")
+        .set("user-agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.8; rv:16.0) Gecko/20100101 Firefox/16.0")
         .fin();
       
       if (n == 1) {
@@ -41,7 +41,7 @@ public class DheTest {
         b.set("foo", 124);
         b.set("bar", 129);
       } else if (n == 2) {
-        b.set("bar", 130);
+        b.set("user-agent", "Mozilla/5.0 (Macintosh; Intel SOMETHING ELSE HERE");
       }
       
       b.get()

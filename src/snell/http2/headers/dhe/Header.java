@@ -14,12 +14,13 @@ import java.util.Iterator;
 
 import snell.http2.headers.Huffman;
 import snell.http2.headers.ValueSupplier;
+import snell.http2.headers.StringValueSupplier.StringValueParser;
 import snell.http2.headers.BinaryValueSupplier.BinaryDataValueParser;
 import snell.http2.headers.DateTimeValueSupplier.DateTimeValueParser;
 import snell.http2.headers.NumberValueSupplier.NumberValueParser;
-import snell.http2.headers.StringValueSupplier.StringValueParser;
 import snell.http2.headers.ValueSupplier.ValueParser;
 import snell.http2.utils.IoUtils;
+import snell.http2.headers.dhe.CommonPrefixStringValueSupplier.CommonPrefixStringValueParser;
 
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
@@ -41,7 +42,8 @@ public abstract class Header<I extends Header.Instance>
   @SuppressWarnings("unchecked")
   public static <H extends Header<?>>H parse(
     InputStream in,
-    Huffman huffman)
+    Huffman huffman,
+    Storage storage)
       throws IOException {
     byte[] flag = new byte[1];
     int r = in.read(flag);
@@ -59,10 +61,10 @@ public abstract class Header<I extends Header.Instance>
       builder = (HeaderBuilder<?, H, ?>) range();
       break;
     case TYPE_CLONE:
-      builder = (HeaderBuilder<?, H, ?>) cloned();
+      builder = (HeaderBuilder<?, H, ?>) cloned(storage);
       break;
     case TYPE_LITERAL:
-      builder = (HeaderBuilder<?, H, ?>) literal();
+      builder = (HeaderBuilder<?, H, ?>) literal(storage);
       break;
     }
     return builder != null ? 
@@ -149,27 +151,27 @@ public abstract class Header<I extends Header.Instance>
   }
   
   public static IndexBuilder index() {
-    return new IndexBuilder();
+    return new IndexBuilder(null);
   }
   
   public static RangeBuilder range() {
-    return new RangeBuilder();
+    return new RangeBuilder(null);
   }
   
-  public static CloneBuilder cloned() {
-    return new CloneBuilder();
+  public static CloneBuilder cloned(Storage storage) {
+    return new CloneBuilder(storage);
   }
   
-  public static CloneBuilder ephemeralCloned() {
-    return cloned().ephemeral();
+  public static CloneBuilder ephemeralCloned(Storage storage) {
+    return cloned(storage).ephemeral();
   }
   
-  public static LiteralBuilder literal() {
-    return new LiteralBuilder();
+  public static LiteralBuilder literal(Storage storage) {
+    return new LiteralBuilder(storage);
   }
   
-  public static LiteralBuilder ephemeralLiteral() {
-    return literal().ephemeral();
+  public static LiteralBuilder ephemeralLiteral(Storage storage) {
+    return literal(storage).ephemeral();
   }
   
   public static interface Instance {
@@ -184,10 +186,19 @@ public abstract class Header<I extends Header.Instance>
     <I extends Instance, H extends Header<I>, B extends HeaderBuilder<I,H,B>>
     implements Supplier<H> {
     
+    private final Storage storage;
     private final ImmutableSet.Builder<I> instances = 
       ImmutableSet.builder();
     private boolean eph = false;
     private int c = 0;
+    
+    protected HeaderBuilder(Storage storage) {
+      this.storage = storage;
+    }
+    
+    protected Storage storage() {
+      return storage;
+    }
     
     public boolean isEphemeral() {
       return eph;
@@ -268,6 +279,9 @@ public abstract class Header<I extends Header.Instance>
   
   public static final class IndexBuilder 
     extends HeaderBuilder<IndexInstance,Index,IndexBuilder> {
+    public IndexBuilder(Storage storage) {
+      super(storage);
+    }
     public IndexBuilder set(byte... idx) {
       checkNotNull(idx);
       checkArgument(idx.length <= 32);
@@ -345,6 +359,9 @@ public abstract class Header<I extends Header.Instance>
   
   public static final class RangeBuilder 
     extends HeaderBuilder<RangeInstance,Range,RangeBuilder> {
+    public RangeBuilder(Storage storage) {
+      super(storage);
+    }
     public RangeBuilder range(byte s, byte e) {
       add(new RangeInstance(s,e));
       return this;
@@ -496,6 +513,9 @@ public abstract class Header<I extends Header.Instance>
   
   public static final class CloneBuilder 
     extends HeaderBuilder<CloneInstance,Clone,CloneBuilder> {
+    public CloneBuilder(Storage storage) {
+      super(storage);
+    }
     public CloneBuilder value(byte idx, ValueSupplier<?> value) {
       checkNotNull(value);
       add(new CloneInstance(idx,value));
@@ -514,8 +534,10 @@ public abstract class Header<I extends Header.Instance>
         byte[] b = new byte[2];
         int r = in.read(b);
         checkState(r == 2);
+        String name = storage().nameOf(b[0]);
+        checkNotNull(name);
         ValueSupplier<?> val = 
-          selectValueParser(b[1])
+          selectValueParser(b[1],storage(),name)
             .useHuffman(huffman)
             .parse(in, b[1]);
         value(b[0],val);
@@ -590,6 +612,9 @@ public abstract class Header<I extends Header.Instance>
   
   public static final class LiteralBuilder
     extends HeaderBuilder<LiteralInstance,Literal,LiteralBuilder> {
+    public LiteralBuilder(Storage storage) {
+      super(storage);
+    }
     public LiteralBuilder value(String name, ValueSupplier<?> value) {
       checkNotNull(name);
       checkNotNull(value);
@@ -613,7 +638,10 @@ public abstract class Header<I extends Header.Instance>
         int r = in.read(b);
         checkState(r == 1);
         ValueSupplier<?> val = 
-          selectValueParser(b[0])
+          selectValueParser(
+            b[0],
+            storage(),
+            name)
             .useHuffman(huffman)
             .parse(in, b[0]);
         value(name,val);
@@ -713,15 +741,15 @@ public abstract class Header<I extends Header.Instance>
           break;
         case TYPE_CLONE:
           if (ephemeral)
-            ephemeral_cloned = Header.ephemeralCloned();
+            ephemeral_cloned = Header.ephemeralCloned(storage);
           else
-            cloned = Header.cloned();
+            cloned = Header.cloned(storage);
           break;
         case TYPE_LITERAL:
           if (ephemeral)
-            ephemeral_literal = Header.ephemeralLiteral();
+            ephemeral_literal = Header.ephemeralLiteral(storage);
           else
-            literal = Header.literal();
+            literal = Header.literal(storage);
           break;
         }
     }
@@ -770,10 +798,18 @@ public abstract class Header<I extends Header.Instance>
     }
   }
 
-  static final ValueParser<?,?> selectValueParser(byte flags) {
+  static final ValueParser<?,?> selectValueParser(
+    byte flags, 
+    Storage storage, 
+    String name) {
     switch((byte)(flags & ~0x3F)) {
     case 0x0: 
-      return new StringValueParser();
+      if (DheHeaderSerializer.DO_COMMON_PREFIX)
+        return new CommonPrefixStringValueParser()
+          .usingStorage(storage)
+          .forName(name);
+      else
+        return new StringValueParser();
     case 0x40:
       return new NumberValueParser();
     case (byte)0x80: 

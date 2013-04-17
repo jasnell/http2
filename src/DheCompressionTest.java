@@ -101,6 +101,7 @@ public final class DheCompressionTest {
       }  
       
     } catch (Throwable t) {
+      t.printStackTrace();
       throw propagate(t);
     }
   }

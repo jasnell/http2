@@ -10,7 +10,11 @@ import java.util.Arrays;
 
 import snell.http2.frames.HeadersFrame;
 import snell.http2.headers.Huffman;
+import snell.http2.headers.StringValueSupplier;
 import snell.http2.headers.delta.Delta;
+import snell.http2.headers.dhe.CommonPrefixStringValueSupplier;
+import snell.http2.headers.dhe.CommonPrefixStringValueSupplier.CommonPrefixStringValueParser;
+import snell.http2.headers.dhe.Storage;
 import snell.http2.utils.BitBucket;
 import snell.http2.utils.RangedIntegerSupplier;
 
@@ -20,26 +24,33 @@ public class Test {
   
     Huffman huffman = Huffman.REQUEST_TABLE;
     
-    String test = "\uD801\uDC00 this is a test";
+    Storage storage = new Storage();
+    storage.push("test", StringValueSupplier.create("hello;there"));
     
-    System.out.println(test);
+    StringValueSupplier s = 
+      StringValueSupplier.create(true,"hello;","hello;howdyhi!");
     
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    CommonPrefixStringValueSupplier c = 
+      new CommonPrefixStringValueSupplier(
+        huffman,true,"test",s,storage);
     
-    huffman.encode(test, out);
+    ByteArrayOutputStream b = new ByteArrayOutputStream();
     
-    byte[] data = out.toByteArray();
+    c.writeTo(b);
     
-    System.out.println(Arrays.toString(data));
+    System.out.println(Arrays.toString(b.toByteArray()));
     
-    out = new ByteArrayOutputStream();
+    ByteArrayInputStream in = new ByteArrayInputStream(b.toByteArray());
     
-    huffman.decode(data, out);
+    CommonPrefixStringValueParser parser = 
+      new CommonPrefixStringValueParser()
+        .useHuffman(huffman)
+        .usingStorage(storage)
+        .forName("test");
+
+    c = parser.parse(in, (byte)0x21);
     
-    System.out.println(new String(out.toByteArray(), "UTF-8"));
-    
-    System.out.println(test.getBytes("UTF-8").length);
-    System.out.println(data.length);
+    System.out.println(c);
     
 //    final RangedIntegerSupplier stream_ids = 
 //      forAllEvenIntegers();
