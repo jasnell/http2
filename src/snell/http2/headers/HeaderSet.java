@@ -7,7 +7,6 @@ import java.io.InputStream;
 
 import org.joda.time.DateTime;
 
-import snell.http2.headers.delta.Huffman;
 
 import com.google.common.base.Splitter;
 import com.google.common.base.Supplier;
@@ -63,11 +62,11 @@ public interface HeaderSet<X extends HeaderSet<X>>
     }
         
     private StringValueSupplier c(String v) {
-      return utf8?create(v):create(huffman,false,v);
+      return create(huffman,utf8,v);
     }
     
     private StringValueSupplier c(String... v) {
-      return utf8?create(v):create(huffman,false,v);
+      return create(huffman,utf8,v);
     }
     
     @Override

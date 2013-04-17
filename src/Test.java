@@ -5,14 +5,41 @@ import static snell.http2.frames.Frame.parse;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.util.Arrays;
 
 import snell.http2.frames.HeadersFrame;
+import snell.http2.headers.Huffman;
 import snell.http2.headers.delta.Delta;
+import snell.http2.utils.BitBucket;
 import snell.http2.utils.RangedIntegerSupplier;
 
 public class Test {
-
+  
   public static void main(String... args) throws Exception {
+  
+    Huffman huffman = Huffman.REQUEST_TABLE;
+    
+    String test = "\uD801\uDC00 this is a test";
+    
+    System.out.println(test);
+    
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    
+    huffman.encode(test, out);
+    
+    byte[] data = out.toByteArray();
+    
+    System.out.println(Arrays.toString(data));
+    
+    out = new ByteArrayOutputStream();
+    
+    huffman.decode(data, out);
+    
+    System.out.println(new String(out.toByteArray(), "UTF-8"));
+    
+    System.out.println(test.getBytes("UTF-8").length);
+    System.out.println(data.length);
     
 //    final RangedIntegerSupplier stream_ids = 
 //      forAllEvenIntegers();

@@ -17,8 +17,8 @@ import java.io.OutputStream;
 import snell.http2.headers.HeaderSerializer;
 import snell.http2.headers.HeaderSet;
 import snell.http2.headers.HeaderSetter;
+import snell.http2.headers.Huffman;
 import snell.http2.headers.ValueSupplier;
-import snell.http2.headers.delta.Huffman;
 import snell.http2.headers.dhe.Dhe.Mode;
 import snell.http2.headers.dhe.Header.BuilderContext;
 import snell.http2.headers.dhe.Header.Clone;
@@ -31,8 +31,6 @@ import snell.http2.headers.dhe.Header.Range;
 import snell.http2.headers.dhe.Header.RangeInstance;
 
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.LinkedHashMultimap;
-import com.google.common.collect.Multimap;
 import com.google.common.io.ByteStreams;
 
 public final class DheHeaderSerializer 
@@ -79,8 +77,6 @@ public final class DheHeaderSerializer
     Storage storage = storage();
     BuilderContext ctx = 
       new BuilderContext(storage);
-    Multimap<String,ValueSupplier<?>> store =
-      LinkedHashMultimap.create();
     int c = 0;
     for (String name : map) {
       name = name.toLowerCase();
@@ -100,8 +96,6 @@ public final class DheHeaderSerializer
             if (ctx.literal(name, val, ephemeral, rest_buf))
               c++;
           }
-          if (!ephemeral)
-            store.put(name, val);
         }
       }
     }  
@@ -158,7 +152,6 @@ public final class DheHeaderSerializer
               value);
             if (!clone.ephemeral())
               storage.push(name, value);
-              //store.put(name, value);
           }
         }
         break;
@@ -170,7 +163,6 @@ public final class DheHeaderSerializer
           set.set(name,val);
           if (!literal.ephemeral())
             storage.push(name,val);
-            //store.put(name, val);
         }
         break;
       default:

@@ -1,4 +1,4 @@
-package snell.http2.headers.delta;
+package snell.http2.utils;
 import static snell.http2.utils.IntPair.of;
 
 import java.io.IOException;
@@ -8,19 +8,20 @@ import java.io.Writer;
 import java.util.Comparator;
 import java.util.Map;
 
+import snell.http2.utils.BitBucket;
+import snell.http2.utils.IntPair;
+
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.primitives.Ints;
 
-import snell.http2.utils.BitBucket;
-import snell.http2.utils.IntPair;
 
-public final class Huffman {
+public final class OldHuffman {
 
   public static void encode(
     String data, 
-    Huffman codeTable, 
+    OldHuffman codeTable, 
     OutputStream out) 
       throws IOException {
     if (data == null)
@@ -35,7 +36,7 @@ public final class Huffman {
   
   public static void decode(
     byte[] bytes, 
-    Huffman codeTable,
+    OldHuffman codeTable,
     OutputStream out) 
       throws IOException {
       OutputStreamWriter sw = 
@@ -52,7 +53,7 @@ public final class Huffman {
   }
   
   private static class HuffmanTableBuilder
-    implements Supplier<Huffman> {
+    implements Supplier<OldHuffman> {
 
     private final ImmutableMap.Builder<Character,IntPair> table =
       ImmutableMap.builder();
@@ -69,8 +70,8 @@ public final class Huffman {
     }
     
     @Override
-    public Huffman get() {
-      return new Huffman(this);
+    public OldHuffman get() {
+      return new OldHuffman(this);
     }
    
   }
@@ -78,7 +79,7 @@ public final class Huffman {
   private final ImmutableMap<Character,IntPair> table;
   private final Node root = new Node();
   
-  protected Huffman(HuffmanTableBuilder builder) {
+  protected OldHuffman(HuffmanTableBuilder builder) {
     this.table = builder.table.build();
     buildDecodeTable(builder);
   }
@@ -182,7 +183,7 @@ public final class Huffman {
     }
   }
   
-  public static final Huffman REQUEST_TABLE = 
+  public static final OldHuffman REQUEST_TABLE = 
     make()
       .add(0,  of(0x07ffffbc, 27))
       .add(1,  of(0x07ffffbd, 27))
@@ -443,7 +444,7 @@ public final class Huffman {
       .add(256, of(0x00000012,  5))
       .get();
 
-  public static final Huffman RESPONSE_TABLE = 
+  public static final OldHuffman RESPONSE_TABLE = 
       make()
       .add(0, of(0x03ffffbe,26))
       .add(1, of(0x03ffffbf,26))

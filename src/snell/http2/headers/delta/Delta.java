@@ -26,6 +26,7 @@ import java.util.Set;
 
 import snell.http2.headers.HeaderSet;
 import snell.http2.headers.HeaderSetter;
+import snell.http2.headers.Huffman;
 import snell.http2.headers.ValueSupplier;
 import snell.http2.headers.delta.Operation.Code;
 import snell.http2.headers.delta.Operation.Toggl;

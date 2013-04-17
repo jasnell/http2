@@ -14,6 +14,7 @@ import com.google.common.primitives.UnsignedInteger;
 import snell.http2.headers.BinaryValueSupplier.BinaryDataValueParser;
 import snell.http2.headers.DateTimeValueSupplier.DateTimeValueParser;
 import snell.http2.headers.HeaderSetter;
+import snell.http2.headers.Huffman;
 import snell.http2.headers.NumberValueSupplier.NumberValueParser;
 import snell.http2.headers.StringValueSupplier.StringValueParser;
 import snell.http2.headers.ValueSupplier;

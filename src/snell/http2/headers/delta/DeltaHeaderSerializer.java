@@ -7,6 +7,7 @@ import java.io.OutputStream;
 import snell.http2.headers.HeaderSerializer;
 import snell.http2.headers.HeaderSet;
 import snell.http2.headers.HeaderSetter;
+import snell.http2.headers.Huffman;
 
 public final class DeltaHeaderSerializer
   implements HeaderSerializer {

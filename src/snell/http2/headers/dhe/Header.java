@@ -12,13 +12,13 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Iterator;
 
+import snell.http2.headers.Huffman;
 import snell.http2.headers.ValueSupplier;
 import snell.http2.headers.BinaryValueSupplier.BinaryDataValueParser;
 import snell.http2.headers.DateTimeValueSupplier.DateTimeValueParser;
 import snell.http2.headers.NumberValueSupplier.NumberValueParser;
 import snell.http2.headers.StringValueSupplier.StringValueParser;
 import snell.http2.headers.ValueSupplier.ValueParser;
-import snell.http2.headers.delta.Huffman;
 import snell.http2.utils.IoUtils;
 
 import com.google.common.base.Function;

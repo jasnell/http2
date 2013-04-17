@@ -22,7 +22,7 @@ public final class BitBucket {
     bsa_boff = 0;
     idx_byte = 0;
     idx_boff = 0;
-    num_bits = 0;
+    num_bits = bucket.length * 8;
     last_idx = 0;    
   }
   

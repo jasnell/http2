@@ -5,7 +5,6 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableList.copyOf;
 import static com.google.common.collect.Iterables.size;
 import static snell.http2.utils.IoUtils.int2uvarint;
-import static snell.http2.utils.IoUtils.readLengthPrefixedString;
 import static snell.http2.utils.IoUtils.readLengthPrefixedData;
 
 import java.io.ByteArrayOutputStream;
@@ -13,7 +12,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-import snell.http2.headers.delta.Huffman;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Throwables;
@@ -83,8 +81,8 @@ public class StringValueSupplier
     for (String string : strings) {
       byte[] data = null;
       if (huffman != null) {
-        if (utf8)
-          throw new IllegalArgumentException(); // Cannot huffman encode utf8 right now
+//        if (utf8)
+//          throw new IllegalArgumentException(); // Cannot huffman encode utf8 right now
         ByteArrayOutputStream comp = 
           new ByteArrayOutputStream();
         huffman.encode(string, comp);
@@ -150,24 +148,23 @@ public class StringValueSupplier
       boolean utf8 = flag(flags,UTF8_TEXT);
       int c = flags & ~0xE0;
       while (c >= 0) {
+        if (huffman == null)
+          throw new IllegalStateException();
+        ByteArrayOutputStream comp =
+          new ByteArrayOutputStream();
+        byte[] data = 
+          readLengthPrefixedData(in);
+        huffman.decode(data, comp);
         if (!utf8) {
-          if (huffman == null)
-            throw new IllegalStateException();
-          ByteArrayOutputStream comp =
-            new ByteArrayOutputStream();
-          byte[] data = 
-            readLengthPrefixedData(in);
-          huffman.decode(data, comp);
           strings.add(
             new String(
-              comp.toByteArray()));
+              comp.toByteArray(), 
+              "ISO-8859-1"));
         } else {
           strings.add(
-              readLengthPrefixedString(
-                in, 
-                utf8 ? 
-                  "UTF-8" : 
-                  "ISO8859-1")); 
+            new String(
+              comp.toByteArray(), 
+              "UTF-8")); 
         }
         c--;
       }
@@ -189,12 +186,6 @@ public class StringValueSupplier
       strings);
   }
   
-  public static StringValueSupplier create(
-    boolean utf8, 
-    Iterable<String> strings) {
-      return create(null,utf8,strings);
-  }
-    
   public static StringValueSupplier create(
     Iterable<String> strings) {
     return new StringValueSupplier(strings);

@@ -27,12 +27,13 @@ public class DheTest {
   
       HeadersFrameBuilder b =
         HeadersFrame.make(dhe.ser())
+        .useUtf8Headers()
         .streamId(stream_ids)
         .set(":method", "get")
         .set(":path", "/")
         .set(":host", "example.org")
         .set("foo", 123)
-        .set("user-agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.8; rv:16.0) Gecko/20100101 Firefox/16.0")
+        .set("user-agent", "ŠMozilla/5.0 (Macintosh; Intel Mac OS X 10.8; rv:16.0) Gecko/20100101 Firefox/16.0")
         .fin();
       
       if (n == 1) {
