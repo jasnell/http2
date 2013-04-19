@@ -319,7 +319,7 @@ that require greater than four bytes to encode cannot be represented.
 
 #### Request Code Table:
 
-``
+```
     (  0)  |11111111|11111111|11111111|0 [25]        1fffffe [25]
     (  1)  |11111111|11111111|11111111|1 [25]        1ffffff [25]
     (  2)  |11111111|11111111|11100000 [24]           ffffe0 [24]
@@ -498,11 +498,12 @@ that require greater than four bytes to encode cannot be represented.
     (0xF1) |11110010 [8]                                  f2 [8]
     (0xF2) |11110011 [8]                                  f3 [8]
     (0xF3) |11110100 [8]                                  f4 [8]
-    (0xF4) |11110101 [8]                                  f5 [8]``
+    (0xF4) |11110101 [8]                                  f5 [8]
+```
 
 #### Response Code Table:
 
-`` 
+``` 
     (  0)  |11111111|11111111|11111111|0 [25]        1fffffe [25]
     (  1)  |11111111|11111111|11111111|1 [25]        1ffffff [25]
     (  2)  |11111111|11111111|11100000 [24]           ffffe0 [24]
@@ -681,11 +682,12 @@ that require greater than four bytes to encode cannot be represented.
     (0xF1) |11110010 [8]                                  f2 [8]
     (0xF2) |11110011 [8]                                  f3 [8]
     (0xF3) |11110100 [8]                                  f4 [8]
-    (0xF4) |11110101 [8]                                  f5 [8]``
+    (0xF4) |11110101 [8]                                  f5 [8]
+```
 
 ## Pre-populated Static Storage
 
-`
+```
     0x80 "date"                        = NIL
     0x81 ":scheme"                     = "https"
     0x82 ":scheme"                     = "http"
@@ -814,4 +816,4 @@ that require greater than four bytes to encode cannot be represented.
     0xFD NIL
     0xFE NIL
     0xFF NIL
-`
+```
