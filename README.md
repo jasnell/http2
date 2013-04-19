@@ -20,10 +20,10 @@ significant bit identifies whether an item from the static or dynamic
 cache is being referenced. Note: the Nil byte (0x00) is a valid identifier
 for the dynamic cache.
 
-`
+```
     0xxxxxxx  --  Dynamic Cache
     1xxxxxxx  --  Static Cache
-`
+```
 
 The dynamic cache is managed in a "least recently written" style, that is, as
 the cache fills to capacity in both number of entries and maximum stored byte
@@ -58,12 +58,12 @@ ONLY VALUE SIZE is considered. Duplicate values MUST be counted individually.
 Headers are serialized into four typed header groups, each represented by a
 two-bit identifier.
 
-`
+```
     00 -- Index Header Group
     01 -- Index Range Header Group
     10 -- Cloned Index Header Group
     11 -- Literal Header Group
-`
+```
 
 The Cloned Index (10) and Literal (11) header group types have an additional
 "ephemeral" property that indicates whether or not the group affects the 
@@ -74,9 +74,9 @@ instances.
 
 ### Header Group Prefix:
 
-`
+```
     00 0 00000
-`
+```
   
 The first two most significant bits of the header group prefix identify the 
 group type. The next bit is the "ephemeral flag" and is used only for Cloned
@@ -97,12 +97,12 @@ identifier for items in either the Static or Dynamic Cache.
 
 For instance:
  
-`
+```
     00000000 00000000 = References item #0 from the dynamic cache
  
     00000001 00000000 10000000 = References item #0 from the dynamic cache and 
                                  item #0 from the static cache
-`
+```
                               
 Index Header Groups do not affect the stored compression state. If an Index
 Header Group references a header index that has not yet been allocated, the 
@@ -117,20 +117,20 @@ identifiers. Each pair specifies a sequential range of adjacent ranges.
 
 For instance,
 
-`
+```
     01000000 00000000 00000100 = References items #0-#4 from the dynamic cache.
                                 (five distinct items total)
-`
+```
 
 
  A range MAY span dynamic and static index values. Index values are treated
  as unsigned byte values, so indices from the static cache are numerically 
  greater than dynamic cache values.. e.g. 
  
-`
+```
     01000000 01111111 10000001 = References item #127 from the dynamic cache, and
                                 items #0 and #1 from the static cache.
-`
+```
 
 Index Range Header Groups do not affect the stored compression state. If a 
 range references a header index that has not yet been allocated, the
@@ -155,10 +155,10 @@ For instance, assume the dynamic cache currently contains an item at index #1
 with key name "foo" and value "bar", the following causes a new item to be 
 added to the storage with key name "foo" and value "baz":
 
-`
+```
     10000000 00000001 00000000 00000100 
     10111000 01001111 10110101 00100000
-`
+```
 
 (Explanation of the value syntax is given a bit later)
 
@@ -184,11 +184,11 @@ is stored in the next available storage index.
 
 For instance:
 
-`
+```
     11000000 00000011 01100110 01101111
     01101111 00000000 00000010 10111000
     01000100 11010010
-`
+```
 
 Stores a new header with name "foo" and value "baz" in the dynamic cache.
 
@@ -204,12 +204,12 @@ While this is allowed, it is expected to be rare.
 
 Header Values can be one of four types, each identified by a two-bit identifier.
 
-`
+```
    00 -- UTF-8 Text
    01 -- Numeric
    10 -- Timetamp
    11 -- Raw Binary Octets
-`
+```
  
 An individual value MAY consist of up to 32 distinct discreet "value instances". 
 A value with multiple instances is considered, for all intensive purposes, to 
@@ -217,9 +217,9 @@ be a single value.
 
 Each serialized value is preceded by an 8-bit Value Prefix.
 
-`
+```
     00 0 00000
-`
+```
  
 The first two most significant bits specifies the value type, the third
 significant bit is a reserved flag. Future iterations of this specification
@@ -257,7 +257,7 @@ The length prefix is encoded as an unsigned variable length integer.
 
 ### Unsigned Variable Length Encoding:
 
-`
+```
     def uvarint(num):
       return [] if num = 0
       ret = []
@@ -266,7 +266,7 @@ The length prefix is encoded as an unsigned variable length integer.
         ret.push (byte)((num & ~0x80) | ( m >  0 ? 0x80 : 0x00 ));
         num = m;
       return ret;
-`
+```
 
 The uvarint syntax is identical to that used by Google's protobufs. They 
 are serialized with the least-significant bytes first in batches of 7-bits, 
@@ -299,9 +299,9 @@ six least significant bits from each of the remaining trailing octets.
 For instance, the UTF-8 character U+00D4 (LATIN CAPITAL LETTER O WITH 
 CIRCUMFLEX), with UTF-8 representation of C394 (hex) is encoded as:
 
-`
+```
     11000100 01010010 10010000
-`
+```
 
 The first 8-bits represents the huffman-table prefix, the first six most 
 significant bytes of the second octet are taken directly from the six least
