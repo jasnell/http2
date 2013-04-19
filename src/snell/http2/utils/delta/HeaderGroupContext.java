@@ -1,4 +1,4 @@
-package snell.http2.headers.delta;
+package snell.http2.utils.delta;
 
 import static com.google.common.base.Throwables.propagate;
 import static snell.http2.utils.RangedIntegerSupplier.forRange;

@@ -1,4 +1,4 @@
-package snell.http2.headers.delta;
+package snell.http2.utils.delta;
 
 public class InvalidOperationException 
   extends RuntimeException {

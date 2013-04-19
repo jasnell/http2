@@ -12,14 +12,15 @@ import com.google.common.collect.ImmutableSet;
 
 import snell.http2.headers.HeaderBlock;
 import snell.http2.headers.HeaderBlock.HeaderBlockBuilder;
-import snell.http2.headers.delta.Delta;
+import snell.http2.headers.dhe.Dhe;
+import snell.http2.headers.dhe.Dhe.Mode;
 
 public final class CompressionTest {
   
-  private static final Delta req_delta = 
-    Delta.forRequest();
-  private static final Delta res_delta = 
-    Delta.forResponse();
+  private static final Dhe req_dhe = 
+    new Dhe(Mode.REQUEST);
+  private static final Dhe res_dhe = 
+    new Dhe(Mode.RESPONSE);
   
   private static final ImmutableSet<String> NUMS = 
     ImmutableSet.of(
@@ -44,7 +45,7 @@ public final class CompressionTest {
     try {
       int c = 2;
       while(c > 0) {
-        Delta delta = null;
+        Dhe dhe = null;
         HeaderBlockBuilder blockBuilder = null;
         boolean is_req = true;
         BufferedReader line_reader = reader();
@@ -52,17 +53,17 @@ public final class CompressionTest {
         while((line = line_reader.readLine()) != null) {
           if (line.trim().length() == 0)
             break;
-          if (delta == null) {
+          if (dhe == null) {
             String[] tokens = line.split("\\s",3);
             if (tokens[0].startsWith("HTTP")) {
-              delta = res_delta;
+              dhe = res_dhe;
               is_req = false;
             } else {
-              delta = req_delta;
+              dhe = req_dhe;
               is_req = true;
             }
             blockBuilder = 
-              HeaderBlock.make(delta.ser());
+              HeaderBlock.make(dhe);
             set_header_line(
               blockBuilder,
               tokens,
@@ -97,8 +98,10 @@ public final class CompressionTest {
         } else {
           c--;
         }
-      }
+      }  
+      
     } catch (Throwable t) {
+      t.printStackTrace();
       throw propagate(t);
     }
   }

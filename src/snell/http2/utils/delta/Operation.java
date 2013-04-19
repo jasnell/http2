@@ -1,4 +1,4 @@
-package snell.http2.headers.delta;
+package snell.http2.utils.delta;
 
 import static snell.http2.utils.IoUtils.int2uvarint;
 import static snell.http2.utils.IoUtils.uvarint2int;

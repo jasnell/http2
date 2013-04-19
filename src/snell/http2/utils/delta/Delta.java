@@ -1,18 +1,18 @@
-package snell.http2.headers.delta;
+package snell.http2.utils.delta;
 
-import static snell.http2.headers.delta.Operation.makeClone;
-import static snell.http2.headers.delta.Operation.makeKvsto;
-import static snell.http2.headers.delta.Operation.makeToggl;
-import static snell.http2.headers.delta.Operation.makeTrang;
-import static snell.http2.headers.delta.Operation.Code.CLONE;
-import static snell.http2.headers.delta.Operation.Code.ECLONE;
-import static snell.http2.headers.delta.Operation.Code.EKVSTO;
-import static snell.http2.headers.delta.Operation.Code.ETOGGL;
-import static snell.http2.headers.delta.Operation.Code.ETRANG;
-import static snell.http2.headers.delta.Operation.Code.KVSTO;
-import static snell.http2.headers.delta.Operation.Code.TOGGL;
-import static snell.http2.headers.delta.Operation.Code.TRANG;
-import static snell.http2.headers.delta.Operation.Code.get;
+import static snell.http2.utils.delta.Operation.makeClone;
+import static snell.http2.utils.delta.Operation.makeKvsto;
+import static snell.http2.utils.delta.Operation.makeToggl;
+import static snell.http2.utils.delta.Operation.makeTrang;
+import static snell.http2.utils.delta.Operation.Code.CLONE;
+import static snell.http2.utils.delta.Operation.Code.ECLONE;
+import static snell.http2.utils.delta.Operation.Code.EKVSTO;
+import static snell.http2.utils.delta.Operation.Code.ETOGGL;
+import static snell.http2.utils.delta.Operation.Code.ETRANG;
+import static snell.http2.utils.delta.Operation.Code.KVSTO;
+import static snell.http2.utils.delta.Operation.Code.TOGGL;
+import static snell.http2.utils.delta.Operation.Code.TRANG;
+import static snell.http2.utils.delta.Operation.Code.get;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -28,10 +28,10 @@ import snell.http2.headers.HeaderSet;
 import snell.http2.headers.HeaderSetter;
 import snell.http2.headers.Huffman;
 import snell.http2.headers.ValueSupplier;
-import snell.http2.headers.delta.Operation.Code;
-import snell.http2.headers.delta.Operation.Toggl;
 import snell.http2.utils.IntPair;
 import snell.http2.utils.Pair;
+import snell.http2.utils.delta.Operation.Code;
+import snell.http2.utils.delta.Operation.Toggl;
 
 import com.google.common.base.Objects;
 import com.google.common.collect.HashMultimap;

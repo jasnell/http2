@@ -1,9 +1,9 @@
-package snell.http2.headers.headerdiff;
+package snell.http2.utils.headerdiff;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
-import static snell.http2.headers.headerdiff.Utils.stringFromValueSupplier;
-import static snell.http2.headers.headerdiff.Utils.utf8length;
+import static snell.http2.utils.headerdiff.Utils.stringFromValueSupplier;
+import static snell.http2.utils.headerdiff.Utils.utf8length;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -14,12 +14,12 @@ import snell.http2.headers.HeaderSet;
 import snell.http2.headers.HeaderSetter;
 import snell.http2.headers.Huffman;
 import snell.http2.headers.ValueSupplier;
-import snell.http2.headers.headerdiff.Header.DeltaHeaderBuilder;
-import snell.http2.headers.headerdiff.Header.HeaderBuilder;
-import snell.http2.headers.headerdiff.Header.IndexingMode;
-import snell.http2.headers.headerdiff.Header.LiteralHeaderBuilder;
-import snell.http2.headers.headerdiff.HeaderDiff.Mode;
 import snell.http2.utils.IntTriple;
+import snell.http2.utils.headerdiff.Header.DeltaHeaderBuilder;
+import snell.http2.utils.headerdiff.Header.HeaderBuilder;
+import snell.http2.utils.headerdiff.Header.IndexingMode;
+import snell.http2.utils.headerdiff.Header.LiteralHeaderBuilder;
+import snell.http2.utils.headerdiff.HeaderDiff.Mode;
 
 public class HeaderDiffHeaderSerializer 
   implements HeaderSerializer {

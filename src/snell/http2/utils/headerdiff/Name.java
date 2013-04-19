@@ -1,4 +1,4 @@
-package snell.http2.headers.headerdiff;
+package snell.http2.utils.headerdiff;
 
 public final class Name {
 

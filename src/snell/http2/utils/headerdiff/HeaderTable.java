@@ -1,33 +1,22 @@
-package snell.http2.headers.delta;
+package snell.http2.utils.headerdiff;
 
-import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.Lists.newArrayListWithExpectedSize;
 import static com.google.common.collect.Sets.newHashSetWithExpectedSize;
+import static snell.http2.utils.headerdiff.Utils.commonPrefixLength;
+import static snell.http2.utils.headerdiff.Utils.utf8length;
 
 import java.util.List;
 import java.util.Set;
 
-import com.google.common.base.Throwables;
-
-import snell.http2.headers.ValueSupplier;
 import snell.http2.utils.CountingReference;
-import snell.http2.utils.IntPair;
+import snell.http2.utils.IntTriple;
 import snell.http2.utils.Pair;
 import snell.http2.utils.ReferenceCounter;
 
+public final class HeaderTable {
 
-@SuppressWarnings("rawtypes")
-public class Storage {
-  
-  public static Storage create() {
-    return new Storage(StaticStorage.getInstance());
-  }
-  
-  public static Storage create(int max, int max_size) {
-    return new Storage(StaticStorage.getInstance(),max,max_size);
-  }
-  
   public static interface Size {
     int size();
   }
@@ -37,50 +26,38 @@ public class Storage {
   }
   
   private static final class Item {
-    final CountingReference<String> key;
-    final CountingReference<ValueSupplier> val;
+    final Name name;
+    final CountingReference<String> val;
     final int seq;
-    private transient int ksize = -1, vsize = -1;
+    private transient int vsize = -1;
     private transient int hash = 1;
     Item(
-      CountingReference<String> key, 
-      CountingReference<ValueSupplier> val, int seq) {
-      this.key = key;
+      Name name, 
+      CountingReference<String> val, 
+      int seq) {
+      this.name = name;
       this.val = val;
       this.seq = seq;
     }
-    String key() {
-      return key != null ? key.get() : null;
+    Name name() {
+      return name;
     }
-    ValueSupplier value() {
+    String value() {
       return val != null ? val.get() : null;
     }
-    Pair<String,ValueSupplier> asPair() {
-      return Pair.of(key(),value());
+    Pair<Name,String> asPair() {
+      return Pair.of(name(),value());
     }
     int seq() {
       return seq;
     }
-    private int keyLen() {
-      if (ksize == -1) {
-        try {
-        ksize = key().getBytes("ISO-8859-1").length;
-        } catch (Throwable t) {
-          throw Throwables.propagate(t);
-        }
-      }
-      return ksize;
-    }
     private int valLen() {
       if (vsize == -1)
-        vsize = value().length();
+        vsize = utf8length(val.get());
       return vsize;
     }
     public int size() {
       int size = 0;
-      if (key != null && key.count() == 1) {
-        size += keyLen();
-      }
       if (val != null && val.count() == 1)
         size += valLen();
       return size;
@@ -88,7 +65,7 @@ public class Storage {
     @Override
     public int hashCode() {
       if (hash == 1) {
-        hash = 31 * hash + ((key == null) ? 0 : key.hashCode());
+        hash = 31 * hash + ((name == null) ? 0 : name.hashCode());
         hash = 31 * hash + ((val == null) ? 0 : val.hashCode());
         hash = 31 * hash + seq;
       }
@@ -103,10 +80,10 @@ public class Storage {
       if (getClass() != obj.getClass())
         return false;
       Item other = (Item) obj;
-      if (key == null) {
-        if (other.key != null)
+      if (name == null) {
+        if (other.name != null)
           return false;
-      } else if (!key.equals(other.key))
+      } else if (!name.equals(other.name))
         return false;
       if (seq != other.seq)
         return false;
@@ -117,110 +94,107 @@ public class Storage {
         return false;
       return true;
     }
-
-
   }
   
   private final static int DEFAULT_MAX = 0xFFFF;
   private final static int DEFAULT_MAX_SIZE = Integer.MAX_VALUE;
   
-  private final Storage static_storage;
-  private final ReferenceCounter<String> keyCounter = 
+  private final ReferenceCounter<String> valCounter = 
     new ReferenceCounter<String>();
-  private final ReferenceCounter<ValueSupplier> valCounter = 
-    new ReferenceCounter<ValueSupplier>();
   private final List<Item> store;
-  private final int offset, max, maxsize;
+  private final int max, maxsize;
   private int first, current, current_size;
   private final Set<PopListener> listeners = 
     newHashSetWithExpectedSize(10); // what size is reasonable?
-  
-  public Storage() {
-    this(null, DEFAULT_MAX, DEFAULT_MAX_SIZE);
+
+  public HeaderTable() {
+    this(DEFAULT_MAX, DEFAULT_MAX_SIZE);
   }
   
-  public Storage(Storage static_storage) {
-    this(static_storage, DEFAULT_MAX, DEFAULT_MAX_SIZE);
-  }
-  
-  public Storage(Storage static_storage, int max) {
-    this(static_storage,max,DEFAULT_MAX_SIZE);
-  }
-  
-  public Storage(Storage static_storage, int max, int maxsize) {
-    this.static_storage = static_storage;
-    this.offset = 
-      static_storage != null ?
-      static_storage.size() : 0;
+  public HeaderTable(int max, int maxsize) {
     this.max = max;
-    this.first = 0;
-    this.current = offset;
     this.maxsize = maxsize;
+    this.first = 0;
+    this.current = 0;
     store = newArrayListWithExpectedSize(max);
+  }
+  
+  public int maxSize() {
+    return max;
+  }
+  
+  public int maxByteSize() {
+    return maxsize;
   }
   
   public int currentByteSize() {
     return current_size;
   }
   
-  public void addListener(PopListener listener) {
-    listeners.add(listener);
+  public int remainingBytes() {
+    return maxsize - current_size;
+  }
+  
+  public int remainingItems() {
+    return max - size();
+  }
+  
+  public boolean canFitWithinExisting(String val) {
+    return current_size + utf8length(val) <= maxsize;
   }
   
   public void clear() {
     store.clear();
-    first = -1;
-    current = -1;
+    first = 0;
+    current = 0;
   }
   
   public int size() {
     return store.size();
   }
   
-  private CountingReference<String> keyRef(String key) {
-    return keyCounter.acquire(key);
-  }
-  
-  private CountingReference<ValueSupplier> valRef(ValueSupplier val) {
+  private CountingReference<String> valRef(String val) {
     return valCounter.acquire(val);
   }
   
-  private Item itemFor(String key, ValueSupplier val, int c) {
-    return new Item(keyRef(key),valRef(val),c);
+  private Item itemFor(Name name, String val, int c) {
+    return new Item(name,valRef(val),c);
   }
   
-  public int store(String key, ValueSupplier val) {
+  public void replace(int idx, Name name, String val) {
+    Item item = itemFor(name,val,idx);
+    store.set(idx, item);
+  }
+  
+  public int store(Name name, String val) {
     if (max == 0 || maxsize == 0) return -1;
-    Item item = itemFor(key,val,current);
+    Item item = itemFor(name,val,current);
     checkState(reserve(item));
     store.add(item);
     current_size += item.size();
     current++;
     if (current > DEFAULT_MAX)
-      current = offset;
+      current = 0;
     return item.seq();
   }
-
+  
   private Item lookupItem(int idx) {
-    if (idx < offset)
-      return static_storage.lookupItem(idx);
-    else if ((offset+first) > idx) {
-      idx = (offset+max) - (offset+first) + idx - offset;//;
-      return getItem(idx);
-    } else {
-      idx -= offset;// + first;
-      return getItem(idx);
-    }
+    return getItem(idx-first);
   }
   
-  public String lookupKey(int idx) {
-    Pair<String,ValueSupplier> pair = lookup(idx);
+  public Name lookupName(int idx) {
+    Pair<Name,String> pair = lookup(idx);
     return pair != null ? pair.one() : null;
   }
   
-  public Pair<String,ValueSupplier> lookup(int idx) {
+  public Pair<Name,String> lookup(int idx) {
     Item item = lookupItem(idx);
     return item != null ? item.asPair() : null;
+  }
+  
+  public int getItemLength(int idx) {
+    Item item = getItem(idx);
+    return item != null ? item.size() : 0;
   }
   
   private Item getItem(int idx) {
@@ -233,10 +207,23 @@ public class Storage {
     Item item = store.remove(0);
     notifyListeners(item.seq());
     first++;
-    if ((offset+first) >= DEFAULT_MAX-1)
+    if (first >= DEFAULT_MAX-1)
       first = 0;
     return release(
       item);
+  }
+  
+  public int leastRecentlyUsedIndex() {
+    return store.isEmpty() ? -1 : store.get(0).seq();
+  }
+  
+  public int leastRecentlyUsedSize() {
+    String val = 
+      store.isEmpty() ? 
+        null : 
+        store.get(0).value();
+    return val != null ?
+      val.length() : 0;
   }
   
   private void notifyListeners(int seq) {
@@ -244,11 +231,14 @@ public class Storage {
       p.popped(seq);
   }
   
+  public void addListener(PopListener listener) {
+    listeners.add(listener);
+  }
+  
   protected boolean release(Item item) {
     if (item != null) {
-      keyCounter.release(item.key());
-      valCounter.release(item.value());
       current_size -= item.size();
+      valCounter.release(item.value());
       return true;
     } else return false;
   }
@@ -263,21 +253,24 @@ public class Storage {
     return true;
   }
   
-  protected IntPair locate(String key, ValueSupplier val) {
+  public IntTriple locate(Name name, String val) {
     int a = -1, b = -1;
+    int cl = 0;
     for (int c = current - 1; c >= 0; c--) {
       Item item = lookupItem(c);
       checkNotNull(item);
-      if (item.key().equals(key)) {
-        if (a == -1)
+      if (item.name().equals(name)) {
+        int cp = commonPrefixLength(item.value(), val);
+        if (cp >= cl) {
+          cl = cp;
           a = item.seq();
+        }
         if (item.value().equals(val)) {
           b = item.seq();
           break;
         }
       }
     }
-    return IntPair.of(a,b);
+    return IntTriple.of(a,b,cl);
   }
-
 }

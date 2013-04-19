@@ -20,7 +20,6 @@ import snell.http2.headers.DateTimeValueSupplier.DateTimeValueParser;
 import snell.http2.headers.NumberValueSupplier.NumberValueParser;
 import snell.http2.headers.ValueSupplier.ValueParser;
 import snell.http2.utils.IoUtils;
-import snell.http2.headers.dhe.CommonPrefixStringValueSupplier.CommonPrefixStringValueParser;
 
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
@@ -804,12 +803,7 @@ public abstract class Header<I extends Header.Instance>
     String name) {
     switch((byte)(flags & ~0x3F)) {
     case 0x0: 
-      if (DheHeaderSerializer.DO_COMMON_PREFIX)
-        return new CommonPrefixStringValueParser()
-          .usingStorage(storage)
-          .forName(name);
-      else
-        return new StringValueParser();
+      return new StringValueParser();
     case 0x40:
       return new NumberValueParser();
     case (byte)0x80: 

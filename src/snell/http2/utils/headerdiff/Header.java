@@ -1,10 +1,10 @@
-package snell.http2.headers.headerdiff;
+package snell.http2.utils.headerdiff;
 
-import static snell.http2.headers.headerdiff.Utils.writeInteger;
-import static snell.http2.headers.headerdiff.Utils.writeInteger14;
-import static snell.http2.headers.headerdiff.Utils.writeName;
-import static snell.http2.headers.headerdiff.Utils.writeString;
-import static snell.http2.headers.headerdiff.Utils.writeSubstring;
+import static snell.http2.utils.headerdiff.Utils.writeInteger;
+import static snell.http2.utils.headerdiff.Utils.writeInteger14;
+import static snell.http2.utils.headerdiff.Utils.writeName;
+import static snell.http2.utils.headerdiff.Utils.writeString;
+import static snell.http2.utils.headerdiff.Utils.writeSubstring;
 
 import java.io.IOException;
 import java.io.OutputStream;

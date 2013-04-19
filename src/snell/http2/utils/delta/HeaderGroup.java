@@ -1,4 +1,4 @@
-package snell.http2.headers.delta;
+package snell.http2.utils.delta;
 
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -7,9 +7,9 @@ import com.google.common.base.Objects;
 
 import snell.http2.headers.HeaderSetter;
 import snell.http2.headers.ValueSupplier;
-import snell.http2.headers.delta.Storage.PopListener;
 import snell.http2.utils.IntPair;
 import snell.http2.utils.Pair;
+import snell.http2.utils.delta.Storage.PopListener;
 
 /**
  * Header Group represents a currently active set of Headers

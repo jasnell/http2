@@ -4,11 +4,9 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkArgument;
 
 import com.google.common.base.Objects;
-import com.google.common.base.Strings;
 
 import snell.http2.headers.ValueSupplier;
 import snell.http2.utils.IntMap;
-import snell.http2.utils.IntTriple;
 
 public class Storage {
 
@@ -240,77 +238,15 @@ public class Storage {
   
   public static final char[] PFX_LIMITS = 
     new char[] {'/', '&', '?', '=', ',', ';', ' '};
+    
   
-  public String expand(
-    byte idx, 
-    int position, 
-    int length, 
-    String suffix) {
-    try {
-      Item item = rack[idx];
-      if (item != null) {
-        ValueSupplier<?> val = item.value();
-        if (val instanceof CommonPrefixStringValueSupplier) {
-          CommonPrefixStringValueSupplier svs = val.cast();
-          String s = svs.get(position);
-          s = s.substring(0,length);
-          s += suffix;
-          return s;
-        }
-        return null;
-      } else return null;
-    } catch (Throwable t) {
-      return null;
-    }
+  public void printTable() {
+    static_store.printStaticTable();
   }
   
-  private static int cp(String a1, String a2) {
-    String pfx = Strings.commonPrefix(a1, a2);
-    int n = pfx.length()-1;
-    while(n >= 0) {
-      char c = pfx.charAt(n);
-      for (char b : PFX_LIMITS)
-        if (b == c)
-          return n;
-      n--;
+  private void printStaticTable() {
+    for (Item item : rack) {
+      System.out.println(item);
     }
-    return n;
   }
-  
-  // Common Prefix Test Code
-  public IntTriple findLongestCommonPrefix(String name, String val) {
-    checkNotNull(name);
-    checkNotNull(val);
-    name = name.toLowerCase();
-    int idx = -1;
-    int len = -1;
-    int lst = -1;
-    int c = this.size();
-    int i = head;
-    while(c > 0) {
-      Item item = rack[i];
-      if (item != null && 
-          name.equals(item.name())) {
-        ValueSupplier<?> vs = item.value();
-        if (vs instanceof CommonPrefixStringValueSupplier) {
-          CommonPrefixStringValueSupplier svs = vs.cast();
-          int n = 0;
-          for (String s : svs.get()) {
-            int cp = cp(s,val);
-            if (cp > 0 && cp > len) {
-              idx = i;
-              len = cp;
-              lst = n;
-            }
-            n++;
-          }
-        }
-      }
-      i--;
-      c--;
-      if (i < 0) i = 127;
-    }
-    return IntTriple.of(idx,len,lst);
-  }
-  
 }
