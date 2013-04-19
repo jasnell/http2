@@ -30,7 +30,10 @@ the cache fills to capacity in both number of entries and maximum stored byte
 size, the least recently written items are dropped and those indices are 
 reused.
 
-Indices from the dynamic cache are assigned in order, beginning from 0x00.
+Indices from the dynamic cache are assigned in "encounter order", beginning 
+from 0x00. That is to say, the indices are assigned in precisely the same 
+order they are serialized, and thereby encountered by the decompressor upon 
+reading and processing the block.
 
 Each item in the store consists of a Header Name and a Value. The Name is a 
 lower-case ISO-8859-1 character sequence. The Value is either a UTF-8 string, 
