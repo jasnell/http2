@@ -12,6 +12,8 @@ import java.io.OutputStream;
 import java.math.BigInteger;
 import java.util.Arrays;
 
+import snell.http2.utils.IoUtils;
+
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.common.primitives.Shorts;
@@ -25,10 +27,12 @@ public class NumberValueSupplier
   extends ValueSupplier<Number> {
 
   private final byte[] val;
+  private final int size;
   private transient int hash = 1;
   
   public NumberValueSupplier(int val) {
     super(NUMBER);
+    this.size = IoUtils.size(val);
     this.val = unsignedBytes(fromIntBits(val));
   }
   
@@ -37,26 +41,30 @@ public class NumberValueSupplier
    */
   protected NumberValueSupplier(byte flags, long val) {
     super(flags);
+    this.size = IoUtils.size(val);
     this.val = unsignedBytes(fromLongBits(val));
   }
   
   public NumberValueSupplier(long val) {
     super(NUMBER);
+    this.size = IoUtils.size(val);
     this.val = unsignedBytes(fromLongBits(val));
   }
   
   public NumberValueSupplier(UnsignedInteger uint) {
     super(NUMBER);
+    this.size = IoUtils.size(uint.intValue());
     this.val = unsignedBytes(uint);
   }
   
   public NumberValueSupplier(UnsignedLong ulng) {
     super(NUMBER);
+    this.size = IoUtils.size(ulng.longValue());
     this.val = unsignedBytes(ulng);
   }
   
   public int size() {
-    return val.length;
+    return size;
   }
   
   @SuppressWarnings("unchecked")

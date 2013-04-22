@@ -6,14 +6,31 @@ The Apache v2.0 license applies to all source files.
 
 ---
 
-# Delta Header Encoding (DHE)
+# Stored Header Encoding (SHE)
+
+The Stored Header Encoding is an alternative "binary header encoding" for 
+HTTP/2.0 that combines the best elements from three other proposed encodings,
+including:
+
+  * The "Header Delta Compression" scheme proposed by Roberto Peon in
+    http://tools.ietf.org/html/draft-rpeon-httpbis-header-compression-03
+
+  * The "Header Diff" encoding proposed by Herve Reullan, Jun Fujisawa,
+    Romain Bellessort, and Youenn Fablet in 
+    http://tools.ietf.org/html/draft-ruellan-headerdiff-00
+
+  * The "Binary Optimized Header Encoding" proposed by James Snell (me) in 
+    http://tools.ietf.org/html/draft-snell-httpbis-bohe-03
+
+The Stored Header Encoding seeks to find an elegant, efficient and simple
+marriage of the best concepts from each of these separate proposals.
 
 ## State Model:
 
 The compressor and decompressor each maintain a cache of header value pairs.
 There is a static cache, prepopulated by the specification, and a dynamic
 cache, populated through the compression and decompression process. Each 
-cache contains a maximum of 128 individual key value pairs. 
+cache contains a maximum of 128 individual key+value pairs. 
 
 Each item in the index is referenced by an 8-bit identifier. The most 
 significant bit identifies whether an item from the static or dynamic
@@ -27,13 +44,14 @@ for the dynamic cache.
 
 The dynamic cache is managed in a "least recently written" style, that is, as
 the cache fills to capacity in both number of entries and maximum stored byte
-size, the least recently written items are dropped and those indices are 
-reused.
+size, the least recently written items are dropped and those index positions 
+are reused.
 
-Indices from the dynamic cache are assigned in "encounter order", beginning 
-from 0x00. That is to say, the indices are assigned in precisely the same 
-order they are serialized, and thereby encountered by the decompressor upon 
-reading and processing the block.
+Index positions from the dynamic cache are assigned in "encounter order", 
+beginning from 0x00 and increasing monotonically to 0x7F. That is to say, the 
+positions are assigned in precisely the same order that they are serialized, 
+and thereby encountered by the decompressor upon reading and processing the 
+block.
 
 Each item in the store consists of a Header Name and a Value. The Name is a 
 lower-case ISO-8859-1 character sequence. The Value is either a UTF-8 string, 
@@ -41,20 +59,22 @@ a number, a Timestamp or an arbitrary sequence of binary octets.
 
 The available size of the stored compression state can be capped by the 
 decompressor. Each stored value contributes to the accumulated size of the
-storage state. 
+storage state. As new key+value pairs are assigned positions in the dynamic
+cache, the least-recently assigned items must be removed if necessary to free 
+up the required space. 
 
 The size of string values is measured by the number of UTF-8 
-bytes contained in the character sequence. (Note: NOT huffman-coded
-bytes, raw UTF-8 bytes are counted).
+bytes required for the character sequence.
 
-The size of number and timestamp values are measured by the number of uvarint
-encoded bytes it takes to represent the value (see the section of value 
-types below).
+The size of number and timestamp values are measured by the number of 
+unsigned variable length integer (uvarint) encoded bytes it takes to represent 
+the value (see the section of value types below).
 
 The size of raw binary values is measured by the number of octets.
 
-Header names DO NOT contribute to the stored state size of the compressor. 
-ONLY VALUE SIZE is considered. Duplicate values MUST be counted individually.
+Header names DO NOT contribute to the stored state size of the compressor; 
+only the size of the value is considered. Duplicate values MUST be counted 
+individually.
 
 ## Header Groups:
 
@@ -75,19 +95,110 @@ compression state.
 Each header group contains a single 8-bit prefix and up to 32 distinct header 
 instances. 
 
+### Wire Format
+
+```
+  header-block               = *(index-header-group        /
+                                 index-range-header-group  /
+                                 cloned-index-header-group /
+                                 literal-header-group)
+                
+  ; Header Group Prefix = 8 bits ...
+  ;  First two bits = header-group-type
+  ;  Third bit = ephemeral flag
+  ;  Final five bits = instance counter
+  ; 
+  index-header-group-type    = 00
+  index-range-group-type     = 01
+  cloned-index-group-type    = 10
+  literal-group-type         = 11
+  count                      = 5bit
+  
+  index-header-prefix        = index-header-group-type unset count ; 000xxxxx
+  index-range-header-prefix  = index-header-group-type unset count ; 010xxxxx
+  cloned-index-header-prefix = cloned-index-group-type bit   count ; 10?xxxxx
+  literal-header-prefix      = literal-group-type      bit   count ; 11?xxxxx
+  
+  ; Cache Index Identifier = 8 bits ...
+  ;  0xxxxxxx = Dynamic Cache Identifier
+  ;  1xxxxxxx = Static Cache Identifier
+  cache-index                = %x00-FF
+  
+  ; Index Header Group
+  index-header-group         = index-header-prefix 1*32cache-index
+  
+  ; Index-Range Header Group
+  ;  Contains a pair of cache-index values, second MUST
+  ;  me strictly higher in value than the first...
+  index-range-header-group   = index-range-header-prefix 
+                               1*32(cache-index cache-index)
+  
+  ; Cloned-Index Header Group
+  cloned-index-header-group  = cloned-index-header-prefix 
+                               1*32(cache-index value)
+  
+  ; Literal Header Group
+  literal-header-group       = literal-header-prefix 
+                               1*32(name value)
+  
+  value                      = text-value / 
+                               number-value /
+                               timestamp-value /
+                               binary-value
+                               
+  text-value-type            = 00 ; two bits
+  number-value-type          = 01 
+  timestamp-value-type       = 10 
+  binary-value-type          = 11
+  
+  text-value-prefix          = text-value-type unset count      ; 000xxxxx
+  number-value-prefix        = number-value-type unset count    ; 010xxxxx
+  timestamp-value-prefix     = timestamp-value-type unset count ; 100xxxxx 
+  binary-value-prefix        = binary-value-type unset count    ; 110xxxxx
+  
+  text-value                 = text-value-prefix *32string
+  number-value               = number-value-type *32uvarint
+  timestamp-value            = timestamp-value-prefix *32uvarint
+  binary-value               = binary-value-prefix uvarint *OCTET
+  
+  uvarint                    = *uvarint-continuation uvarint-final
+  uvarint-continuation       = %x80-FF
+  uvarint-final              = %x00-7F
+  
+  name                       = 1*tchar
+  tchar                      = "!" / "#" / "$" / "%" / "&" / "'" / "*"
+                               / "+" / "-" / "." / "^" / "_" / "`" / "|" / "~"
+                               / DIGIT / ALPHA
+                               
+  string                     = uvarint *(HUFFMAN-ENCODED-CHAR) HUFFMAN-EOF
+                               padding-to-nearest-byte;
+  padding-to-nearest-byte    = *7unset
+                               
+  bit                        = set / unset
+  unset                      = 0
+  set                        = 1
+  
+```
+
 ### Header Group Prefix:
+
+The Header Group Prefix is a single octet that provides three distinct 
+pieces of information:
 
 ```
     00 0 00000
 ```
   
 The first two most significant bits of the header group prefix identify the 
-group type. The next bit is the "ephemeral flag" and is used only for Cloned
+group type. 
+
+The next bit is the "ephemeral flag" and is used only for Cloned
 and Literal group types. This bit indicates whether or not the group alters
-the stored compression state.  The remaining five bits specify the number of 
-header instances in the group, with 00000 indicating that the group contains 
-1 instance and 11111 contains 32. A header group MUST contain at least one
-instance.
+the stored compression state.  
+
+The remaining five bits specify the number of header instances in the group, 
+with 00000 indicating that the group contains 1 instance and 11111 contains 32. 
+A header group MUST contain at least one instance.
 
 The remaining serialization of the header group depends entirely on the 
 group type. 
@@ -174,7 +285,7 @@ reestablished.
 
 The serialization of the Literal Header Group consists of the Header Group
 Prefix and up to 32 Name+Value pairs. Each Name+Value pair consists of a 
-length-prefixed sequence of ISO-8859-1 bytes specifying the Header Name
+length-prefixed sequence of ASCII bytes specifying the Header Name
 followed by the serialized value. The serialization of the value depends 
 on the value type. The length prefix is encoded as an unsigned variable
 length integer (uvarint). The length prefix SHOULD NOT be longer than five
@@ -224,11 +335,14 @@ Each serialized value is preceded by an 8-bit Value Prefix.
     00 0 00000
 ```
  
-The first two most significant bits specifies the value type, the third
-significant bit is a reserved flag. Future iterations of this specification
-might make use of this bit. The final five least-significant bits specify
-the number of discreet instances in the value. 00000 indicates that one 
-instance is included, 11111 indicates that 32 instances are included.
+The first two most significant bits specifies the value type.
+
+The third significant bit is a reserved flag. Future iterations of this specification
+might make use of this bit. 
+
+The final five least-significant bits specify the number of discreet instances 
+in the value. 00000 indicates that one instance is included, 11111 indicates 
+that 32 instances are included. The value MUST contain at least one instance.
  
 The remaining serialization depends entirely on the type.
 
@@ -236,8 +350,7 @@ The remaining serialization depends entirely on the type.
 
 UTF-8 Text is encoded as a length-prefixed sequence of Huffman-encoded UTF-8
 octets. The length prefix is encoded as an unsigned variable-length integer
-specifying the number of octets representing the value after applying the 
-Huffman-encoding.  
+specifying the number of octets after applying the Huffman-encoding.
 
 ### Numeric Values:
 
@@ -278,6 +391,30 @@ less than or equal to 127 are serialized using at most one byte; values less
 than or equal to 16383 are serialized using at most two bytes; values less 
 than or equal to 2097151 are serialized using at most three bytes. 
 
+For example, the binary representation of the 32-bit integer 217 is:
+
+```
+00000000 00000000 00000000 11011001
+```
+
+The variable length encoding is:
+
+```
+11011001 00000001
+```
+
+The binary representation of the 32-bit integer 1386210052 is:
+
+```
+ 01010010 10011111 11100011 00000100
+```
+
+The variable length encoding is:
+
+``` 
+ 10000100 11000110 11111111 10010100 00000101
+```
+
 ### Huffman Coding:
 
 All UTF-8 text values are compressed using a modified static huffman code.
@@ -309,7 +446,7 @@ CIRCUMFLEX), with UTF-8 representation of C394 (hex) is encoded as:
 The first 8-bits represents the huffman-table prefix, the first six most 
 significant bytes of the second octet are taken directly from the six least
 significant bits of the second UTF-8 byte (0x94). Following those six bits 
-are the six bits of the HUFFMAN_EOF 10 1001, followed by four unset padding 
+are the six bits of the HUFFMAN_EOF 101001, followed by four unset padding 
 bits.
 
 The number of raw UTF-8 bits to write depends on the value of the leading

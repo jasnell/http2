@@ -128,6 +128,7 @@ public final class BitBucket {
       resize();
     bucket[byte_idx] |= (on?1:0) << (7-bsa_boff);
     ++bsa_boff;
+    if (bsa_boff == 8) last_idx++;
     bsa_boff %= 8;
     return this;
   }
@@ -204,6 +205,22 @@ public final class BitBucket {
   
   public BitBucket storeBit64(long val) {
     return storeBits(Longs.toByteArray(val));
+  }
+  
+  public BitBucket storeBitsOn(int count) {
+    while(count > 0) {
+      storeBit(true);
+      count--;
+    }
+    return this;
+  }
+  
+  public BitBucket storeBitsOff(int count) {
+    while(count >0) {
+      storeBit(false);
+      count--;
+    }
+    return this;
   }
   
   public BitBucket storeBits(byte[] bytes) {

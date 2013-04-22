@@ -7,23 +7,13 @@ import java.util.Arrays;
 import snell.http2.frames.Frame;
 import snell.http2.frames.HeadersFrame;
 import snell.http2.frames.HeadersFrame.HeadersFrameBuilder;
-import snell.http2.headers.Huffman;
 import snell.http2.headers.dhe.Dhe;
-import snell.http2.headers.dhe.Storage;
-import snell.http2.utils.IoUtils;
 import snell.http2.utils.RangedIntegerSupplier;
 
 public class DheTest {
   
   public static void main(String... args) throws Exception {
 
-    Storage storage = new Storage();
-    
-    storage.printTable();
-    
-    
-    System.exit(0);
-    
     final RangedIntegerSupplier stream_ids = 
       forAllEvenIntegers();
 

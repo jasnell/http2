@@ -19,7 +19,7 @@ public final class IoUtils {
   /**
    * Calculate the size of a serialized uvarint
    */
-  private static int size(int t) {
+  public static int size(int t) {
     int est = 0;
     if (t < 0) est = 5; // negative will always be 5-bytes
     else {
@@ -33,7 +33,7 @@ public final class IoUtils {
   /**
    * Calculate the size of a serialized uvarint
    */
-  private static int size(long t) {
+  public static int size(long t) {
     int est = 0;
     if (t < 0) est = 10; // negative will always be 10-bytes
     else {
