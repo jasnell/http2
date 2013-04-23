@@ -68,7 +68,8 @@ public final class MiscUtilities {
       BitBucket bucket = 
         new BitBucket();
       int n = log(v);
-      int s = (n+1) >>> 3;
+      int s = (n+2) >>> 3;
+      s +=1;
       bucket.storeBitsOn(s);
       bucket.storeBitsOff(1);
       
@@ -81,6 +82,40 @@ public final class MiscUtilities {
         bucket.storeBits(Longs.toByteArray(v),w);        
       }
 
+      return bucket.toByteArray();
+    }
+    
+    // 0 0000000
+    // 10 000000 00000000
+    // 110 00000 00000000 00000000
+    // 1110 0000 00000000 00000000 00000000
+    // 11110 000 00000000 00000000 00000000 00000000
+    // 111110 00 00000000 00000000 00000000 00000000 00000000
+    // 1111110 0 00000000 00000000 00000000 00000000 00000000 00000000
+    // 11111110  00000000 00000000 00000000 00000000 00000000 00000000 00000000
+    // 11111111 0 0000000 00000000 00000000 00000000 00000000 00000000 00000000 00000000 
+    
+  }
+  
+  
+  public static byte[] lngenc2(long v) {
+
+    if (v <= 0x7F & v >= 0) {
+      return new byte[] {(byte)v};
+    } else {
+      BitBucket bucket = 
+        new BitBucket();
+      int n = log(v);
+      byte s = (byte)((n+2) >>> 3);
+        
+      bucket.storeBits((byte)(s << 5), 3);
+      if (s == 7) {
+        bucket.storeBits(Longs.toByteArray(v),64);
+      } else {
+        v <<= 63-n;
+        int w = 8*(s+1)-(s+1);
+        bucket.storeBits(Longs.toByteArray(v),w);        
+      }
       return bucket.toByteArray();
     }
     

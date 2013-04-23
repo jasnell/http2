@@ -7,7 +7,7 @@ import org.joda.time.DateTime;
 
 /**
  * Encodes a Date-Time as a uvarint representing the 
- * total number of seconds that have elapsed since 
+ * total number of milliseconds that have elapsed since 
  * the NEW_EPOCH (1990-01-01T00:00:00Z)
  */
 public class DateTimeValueSupplier 
@@ -23,11 +23,11 @@ public class DateTimeValueSupplier
   
   private static long calc(DateTime dt) {
     if (dt == null) return -1;
-    return dt.getMillis() / 1000;
+    return dt.getMillis();
   }
 
   public DateTime dateTimeValue() {
-    return new DateTime((longVal() * 1000));
+    return new DateTime((longVal()));
   }
   
   public String toString() {
