@@ -9,11 +9,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+import com.google.common.primitives.UnsignedInteger;
+
 public final class WindowUpdateFrame
   extends Frame<WindowUpdateFrame> {
   
   private static final byte FLAG_END_FLOW_CONTROL = 0x2;
-  static final byte TYPE = 0x9;
+  public static final byte TYPE = 0x9;
   
   public static WindowUpdateFrameBuilder make() {
     return new WindowUpdateFrameBuilder();
@@ -64,6 +66,14 @@ public final class WindowUpdateFrame
     WindowUpdateFrameBuilder builder) {
       super(builder);
       this.val = builder.val;
+  }
+  
+  public int value() {
+    return val;
+  }
+  
+  public UnsignedInteger unsignedValue() {
+    return UnsignedInteger.fromIntBits(val);
   }
   
   public boolean endFlowControl() {

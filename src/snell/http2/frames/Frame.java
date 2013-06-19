@@ -315,4 +315,8 @@ public abstract class Frame<F extends Frame<F>> {
   protected void writeRest(OutputStream out)
     throws IOException {}
   
+  @SuppressWarnings("unchecked")
+  public <F2 extends Frame<F2>>F2 cast() {
+    return (F2)this;
+  }
 }

@@ -9,15 +9,17 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Arrays;
+import java.util.Iterator;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.primitives.Ints;
 
 public final class SettingsFrame 
-  extends Frame<SettingsFrame> {
+  extends Frame<SettingsFrame>
+  implements Iterable<SettingsFrame.Entry> {
   
-  static final byte TYPE = 0x4;
+  public static final byte TYPE = 0x4;
   private static final byte FLAG_CLEAR_PERSISTED = 0x2;
   
   public static final int MAX_KEY_SIZE = 0xFFFFFF;
@@ -61,7 +63,7 @@ public final class SettingsFrame
       checkArgument(v <= MAX_KEY_SIZE);
       this.v = v;
     }
-    int id() {
+    public int id() {
       return v;
     }
     static Settings select(int id) {
@@ -134,6 +136,12 @@ public final class SettingsFrame
     }
     
     public SettingsFrameBuilder set(
+      Settings key,
+      int val) {
+        return set(key,val,null);
+    }
+    
+    public SettingsFrameBuilder set(
       Settings key, 
       int val, 
       SettingFlags flag) {
@@ -142,7 +150,7 @@ public final class SettingsFrame
         new Entry(
           key,
           val,
-          ImmutableSet.of(flag)));
+          flag != null ? ImmutableSet.of(flag) : ImmutableSet.<SettingFlags>of()) );
       return this;
     }
     
@@ -304,5 +312,10 @@ public final class SettingsFrame
         other.setting.id());
     }
     
+  }
+
+  @Override
+  public Iterator<Entry> iterator() {
+    return set.iterator();
   }
 }

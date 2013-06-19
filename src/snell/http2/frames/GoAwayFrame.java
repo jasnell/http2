@@ -13,7 +13,7 @@ import java.io.OutputStream;
 public final class GoAwayFrame 
   extends Frame<GoAwayFrame> {
   
-  static final byte TYPE = 0x7;
+  public static final byte TYPE = 0x7;
   
   public static GoAwayFrameBuilder make() {
     return new GoAwayFrameBuilder();

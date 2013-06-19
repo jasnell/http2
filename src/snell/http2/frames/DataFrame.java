@@ -2,6 +2,7 @@ package snell.http2.frames;
 
 import static java.lang.Math.min;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.channels.ReadableByteChannel;
@@ -157,4 +158,7 @@ public final class DataFrame
     return super.size();
   }
 
+  public InputStream readPayload() throws IOException {
+    return new ByteArrayInputStream(buffer);
+  }
 }
